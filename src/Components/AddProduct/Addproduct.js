@@ -21,11 +21,13 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
-import { Delete } from "@mui/icons-material";
+import { Delete, Update } from "@mui/icons-material";
+import CreateIcon from "@mui/icons-material/Create";
 
 const Addproduct = () => {
   const {
     control,
+    register,
     handleSubmit,
     formState: { errors },
     setValue,
@@ -35,6 +37,7 @@ const Addproduct = () => {
   const [maxWidth, setMaxWidth] = React.useState("sm");
   const [ImageUrl, setImageUrl] = useState();
   const [data, setData] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   let logoselecetdFile = "";
 
@@ -46,15 +49,31 @@ const Addproduct = () => {
     setOpen(false);
   };
 
+
+  const [open2, setOpen2] = React.useState(false);
+  const [fullWidth2, setFullWidth2] = React.useState(true);
+  const [maxWidth2, setMaxWidth2] = React.useState("lg");
+
+  const handleClickOpen2 = () => {
+    setOpen2(true);
+  };
+
+  const handleClose2 = () => {
+    setOpen2(false);
+  };
+
   const onsubmit = (data) => {
     console.log(data);
-    axios.post("http://localhost:5000/Addproduct",data).then((result) => {
+    axios
+      .post("http://localhost:5000/Addproduct", data)
+      .then((result) => {
         console.log(result.data);
         handleClose();
         window.location.reload();
-    }).catch((err) => {
+      })
+      .catch((err) => {
         console.log(err);
-    });
+      });
   };
   useEffect(() => {
     getapi();
@@ -107,15 +126,54 @@ const Addproduct = () => {
     }
   };
 
-  const handledelte =(id)=>{
+  const handledelte = (id) => {
     axios
-      .delete(`http://localhost:5000/deleteproduct/${id}`).then(() => {
-          console.log("deleted");
-          window.location.reload();
-      }).catch((err) => {
-           console.log(err);
+      .delete(`http://localhost:5000/deleteproduct/${id}`)
+      .then(() => {
+        console.log("deleted");
+        window.location.reload();
+      })
+      .catch((err) => {
+        console.log(err);
       });
-  }
+  };
+
+  const [updateid, setUpdateid] = useState("");
+  const handleupdate = async (id, data) => {
+    handleClickOpen2();
+    axios
+      .get(await `http://localhost:5000/getuser/${id}`)
+      .then((result) => {
+        setSelectedProduct(result.data);
+        setValue("updateproductname", result.data.productname);
+        setValue("updateproductDescription", result.data.productdescription);
+        setValue("updateprice", result.data.price);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+
+ 
+  const onsubmitUpdate = (data) => {
+    console.log(data, "updatedata");
+    axios
+      .put(`http://localhost:5000/updateuser/${selectedProduct._id}`, data)
+      .then((result) => {
+        console.log(result.data);
+        handleClose2();
+        getapi();
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+
+  // useEffect(() => {
+  //   const getapi = async()=>{
+  //     axios.get(`localhost:5000/getuser/${id}`)
+  //   }
+  // }, [])
 
   return (
     <div>
@@ -138,7 +196,7 @@ const Addproduct = () => {
                 <TableCell>Price</TableCell>
                 <TableCell>ProductImage</TableCell>
                 <TableCell>Delete</TableCell>
-
+                <TableCell>Update</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -159,17 +217,21 @@ const Addproduct = () => {
                       src={row.ImageURL}
                       alt="img"
                       style={{ width: "100px" }}
-                  
                     />
                   </TableCell>
-                 <TableCell ><Delete onClick={()=>handledelte(row._id)}/></TableCell>
+                  <TableCell>
+                    <Delete onClick={() => handledelte(row._id)} />
+                  </TableCell>
+                  <TableCell>
+                    <CreateIcon onClick={() => handleupdate(row._id)} />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
       </Container>
-      <div className="dialog">
+      <div className="dialog additemdialog">
         <Dialog
           fullWidth={fullWidth}
           maxWidth={maxWidth}
@@ -240,7 +302,6 @@ const Addproduct = () => {
                   />
                 </div>
 
-              
                 <div className="mt-3">
                   <Controller
                     control={control}
@@ -294,13 +355,51 @@ const Addproduct = () => {
                   />
                 </div>
 
-                
-
                 <div className="d-flex justify-content-end">
                   <Button type="submit">Submit</Button>
                 </div>
               </form>
             </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="updateItemdialog">
+        <Dialog
+          fullWidth={fullWidth}
+          maxWidth={maxWidth}
+          open={open2}
+          onClose={handleClose2}
+        >
+          <DialogTitle className=" d-flex justify-content-center">
+            Update Items
+          </DialogTitle>
+          <DialogContent>
+            <form onSubmit={handleSubmit(onsubmitUpdate)}>
+              <div className=" mt-3">
+                <TextField
+                  label="productName"
+                  fullWidth
+                  {...register("updateproductname")}
+                />
+              </div>
+              <div className=" mt-3">
+                <TextField
+                  label="productDescription"
+                  fullWidth
+                  {...register("updateproductDescription")}
+                />
+              </div>
+              <div className=" mt-3">
+                <TextField
+                  TextField
+                  label="Price"
+                  fullWidth
+                  {...register("updateprice")}
+                />
+              </div>
+              <Button type="submit">submit</Button>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
