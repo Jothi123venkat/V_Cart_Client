@@ -36,3 +36,11 @@
     transform: rotate(360deg);
   }
 }
+
+.fontIcons {
+   font-size: 40px;
+}
+
+.clickedpage{
+   background-color: antiquewhite;
+}
