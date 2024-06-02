@@ -140,7 +140,7 @@ const Addproduct = () => {
 
   const [updateid, setUpdateid] = useState("");
   const handleupdate = async (id, data) => {
-    handleClickOpen2();
+    handleClickOpen2();                                    
     axios
       .get(await `http://localhost:5000/getuser/${id}`)
       .then((result) => {
