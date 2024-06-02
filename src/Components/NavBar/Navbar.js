@@ -17,13 +17,20 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useNavigate } from "react-router-dom";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 
-const pages = [, "Home", "Products", "Prime", "Fresh"];
+const pages = [, "Home", "Products", "Your_Orders"];
 const settings = ["Profile", "Admin"];
 
-const Navbar = () => {
+const Navbar = ({cartItem,setCartItem}) => {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
   const [clickedPage, setClickedpage] = React.useState("");
+
+
+  React.useEffect(() => {
+    const CartItemsFromStorage = JSON.parse(localStorage.getItem("VJ_cart"));
+    setCartItem(CartItemsFromStorage)
+   }, [])
+   
 
   const handleOpenNavMenu = (event) => {
     setAnchorElNav(event.currentTarget);
@@ -48,6 +55,8 @@ const Navbar = () => {
       navi("/products");
     } else if (page === "Home") {
       navi("/");
+    }else if(page === "Your_Orders"){
+       navi("/Yourorders")
     }
   };
 
@@ -61,7 +70,6 @@ const Navbar = () => {
     navi("/cart");
     //  window.location.reload();
   };
-  const cartitemlength = localStorage.getItem("cartitemslength");
 
   return (
     <div>
@@ -184,7 +192,7 @@ const Navbar = () => {
                   sx={{ fontSize: "40px", color: "#ffff" }}
                   onClick={() => handlecartnavigate()}
                 />
-                {/* {cartitemlength} */}
+                {cartItem.length}
               </Tooltip>
 
               <Menu

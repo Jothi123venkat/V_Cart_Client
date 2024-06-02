@@ -7,18 +7,23 @@ import CardMedia from '@mui/material/CardMedia';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Swal from 'sweetalert2';
+import { TextField } from '@mui/material';
+import { Search } from '@mui/icons-material';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 
-const Products = () => {
+const Products = ({cartItem,setCartItem}) => {
  
  const[data,setData]=useState();
+ const[keyword,setKeyword]=useState("")
+ const[searchparams,setSearchParams]=useSearchParams("");
   useEffect(() => {
     getapi();
-  }, []);
+  }, [searchparams]);
 
   const getapi = () => {
     axios
-      .get("http://localhost:5000/", data)
+      .get(`http://localhost:5000/?${searchparams}`)
       .then((result) => {
         console.log(result.data);
         setData(result.data);
@@ -31,16 +36,44 @@ const Products = () => {
   // const[cart,setCart]=useState([])
   const handlecart = (val) => {
     console.log(val);
-    axios.post("http://localhost:5000/cart/addcart",val).then((result) => {
-       console.log(result.data,"cartpost");
-       Swal.fire(`${result.data.productname} is Added in Cart`);
-    }).catch((err) => {
-        console.log(err);
-    });
+     const ItemExist = cartItem.find((item)=>item._id === val._id);
+     if(!ItemExist){
+     const UpdatedCartItem = [...cartItem,val];
+      setCartItem(UpdatedCartItem);
+      localStorage.setItem("VJ_cart",JSON.stringify(UpdatedCartItem))  ;
+      Swal.fire({
+        title: "Thank You!",
+        text: `${val.productname} Added to Cart `,
+        icon: "success",
+      });
+     }
+
+     if(ItemExist){
+      Swal.fire({
+        title: `${val.productname} Already Added to Cart `,
+        // text: `${val.productname} Already Added to Cart `,
+        icon: "warning",
+      });
+     }
+  
   };
+   const navi = useNavigate();
+
+   const handleSearch =()=>{
+    navi(`/search?keyword=${keyword}`);
+    setKeyword("")
+   }
 
   return (
-      <div className=' d-flex flex-wrap   justify-content-around  mt-4 '>
+    <div>
+
+  <div className=' d-flex  justify-content-center mt-3'>
+    <TextField size='small'  onChange={(e)=>setKeyword(e.target.value)} value={keyword}/>
+    <Button variant='contained' onClick={handleSearch}> <Search/> </Button>
+  </div>
+
+
+       <div className=' d-flex flex-wrap   justify-content-around  mt-4 '>
 {data && data.map((val)=>(
     <>
                  <Card sx={{ maxWidth: 345 ,marginTop:"20px" }}>
@@ -71,6 +104,8 @@ const Products = () => {
     </>
 ))}
       </div>
+    </div>
+     
   )
 }
 
