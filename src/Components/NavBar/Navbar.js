@@ -26,10 +26,10 @@ const Navbar = ({cartItem,setCartItem}) => {
   const [clickedPage, setClickedpage] = React.useState("");
 
 
-  React.useEffect(() => {
-    const CartItemsFromStorage = JSON.parse(localStorage.getItem("VJ_cart"));
-    setCartItem(CartItemsFromStorage)
-   }, [])
+  // React.useEffect(() => {
+  //   const CartItemsFromStorage = JSON.parse(localStorage.getItem("VJ_cart"));
+  //   setCartItem(CartItemsFromStorage)
+  //  }, [])
    
 
   const handleOpenNavMenu = (event) => {

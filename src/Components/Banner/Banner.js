@@ -2,8 +2,13 @@ import { Grid } from "@mui/material";
 import React from "react";
 import { Button } from "react-bootstrap";
 import AirplanemodeActiveIcon from '@mui/icons-material/AirplanemodeActive';
+import { useNavigate } from "react-router-dom";
 
 const Banner = () => {
+   const navi = useNavigate();
+   const handleExplore =()=>{
+    navi("/products")
+   }
   return (
     <div className=" container ">
     
@@ -26,12 +31,16 @@ const Banner = () => {
         <Grid item  lg={6}  md ={6} sm={12} xs={12}sx={{ fontWeight: "bolder" }}>
             <h1>V-CART <AirplanemodeActiveIcon style={{fontSize:"40px"}}/></h1>
           <h1>START A SHOPPING WITH US</h1>
-          <p>
-            Explore a world of endless possibilities with V-Cart, the only
-             place to discover and shop for all your favorite items.
-          </p>
+          <p className="text-center">
+  Explore a world of endless possibilities with V-Cart, the only
+  place to discover and shop for all your favorite items.
+</p>
+<div className=" d-flex justify-content-center">
+<Button onClick={handleExplore}>Explore now</Button>
+
+</div>
+
  
-          <Button>Explore now</Button>
         </Grid>
       </Grid>
     </div>

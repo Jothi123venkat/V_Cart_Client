@@ -5,7 +5,10 @@ import About from '../AboutUs/About'
 import Categories from '../Categories/Categories'
 import Contactus from '../Contact/Contactus'
 
-const Home = () => {
+const Home = ({cartItem,setCartItem}) => {
+  
+
+
   return (
     <div>
     {/* <Navbar/> */}

@@ -9,12 +9,16 @@ import Orders from './Your_orders/Orders'
 
 const App = () => {
   const[cartItem,setCartItem]=useState([]);
+  React.useEffect(() => {
+    const CartItemsFromStorage = JSON.parse(localStorage.getItem("VJ_cart"));
+    setCartItem(CartItemsFromStorage)
+   }, [])
   return (
     <div>
         <Navbar  cartItem={cartItem} setCartItem={setCartItem}/>
 
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home cartItem={cartItem} setCartItem={setCartItem} />} />
         <Route path="/search" element={<Products/>} />
         <Route path="/Yourorders" element={<Orders />} />
         <Route path="/products" element={<Products cartItem={cartItem} setCartItem={setCartItem}/>} />
