@@ -16,11 +16,21 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useNavigate } from "react-router-dom";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
+import CreateTicket from '../Support/CreateTicket';
+import { HelpOutline, Logout } from '@mui/icons-material';
+import { useState } from "react";
 
-const pages = [, "Home", "Products", "Your_Orders"];
-const settings = ["Profile", "Admin"];
 
-const Navbar = ({cartItem,setCartItem}) => {
+const pages = ["Home", "Products"];
+const settings = ["Profile", "Logout"];
+
+const Navbar = () => {
+  const navigate = useNavigate();
+  const { cartItems } = useCart();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
   const [clickedPage, setClickedpage] = React.useState("");
@@ -55,14 +65,17 @@ const Navbar = ({cartItem,setCartItem}) => {
       navi("/products");
     } else if (page === "Home") {
       navi("/");
-    }else if(page === "Your_Orders"){
-       navi("/Yourorders")
     }
   };
 
   const handlesettingClick = (setting) => {
     if (setting === "Admin") {
       navi("/addproduct");
+    } else if (setting === "Profile") {
+      navi("/profile");
+    } else if (setting === "Logout") {
+      logout();
+      navi("/login");
     }
   };
 
@@ -72,7 +85,7 @@ const Navbar = ({cartItem,setCartItem}) => {
   };
 
   return (
-    <div>
+    <Box>
       <AppBar position="static" sx={{ background: "#1C448E" }}>
         <Container maxWidth="xl">
           <Toolbar disableGutters>
@@ -107,6 +120,14 @@ const Navbar = ({cartItem,setCartItem}) => {
                 color="inherit"
               >
                 <MenuIcon />
+              </IconButton>
+              <IconButton
+                size="large"
+                color="inherit"
+                onClick={() => setTicketDialogOpen(true)}
+                title="Support"
+              >
+                <HelpOutline />
               </IconButton>
               <Menu
                 id="menu-appbar"
@@ -156,25 +177,61 @@ const Navbar = ({cartItem,setCartItem}) => {
               {pages.map((page, index) => (
                 <Button
                   key={page}
-                  onClick={handleCloseNavMenu}
-                  sx={{ my: 2, color: "white", display: "block" }}
+                  onClick={() => handlelinkclick(page)}
+                  sx={{
+                    my: 2,
+                    display: "block",
+                    color: clickedPage === page ? "#1C448E" : "white",
+                    background: clickedPage === page ? "#fff" : "transparent",
+                    ":hover": {
+                      bgcolor: "#4c4cff",
+                      color: "white",
+                    },
+                  }}
                 >
-                  <Button
-                    onClick={() => handlelinkclick(page)}
-                    sx={{
-                      color: clickedPage === page ? "#1C448E" : "#fff",
-                      background: clickedPage === page ? "#fff" : "",
-                      ":hover": {
-                        bgcolor: "#4c4cff",
-                        color: "white",
-                      },
-                    }}
-                  >
-                    {page}
-                  </Button>
+                  {page}
                 </Button>
               ))}
             </Box>
+
+            <Box sx={{ display: 'flex', gap: 1, mr: 2, alignItems: 'center' }}>
+              {!isAuthenticated ? (
+                <>
+                  <Button 
+                    onClick={() => navigate('/login')}
+                    sx={{ color: 'white', borderColor: 'white' }} 
+                    variant="outlined"
+                  >
+                    Login
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/signup')}
+                    sx={{ bgcolor: 'white', color: '#1976d2', '&:hover': { bgcolor: '#f5f5f5' } }} 
+                    variant="contained"
+                  >
+                    Sign Up
+                  </Button>
+                </>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="subtitle1" color="inherit" sx={{ mr: 1, fontWeight: 'bold' }}>
+                    Hello, {user?.name || 'User'}
+                  </Typography>
+                  <Tooltip title="Logout">
+                    <IconButton 
+                      onClick={() => {
+                        logout();
+                        navigate("/login");
+                      }} 
+                      sx={{ color: 'white' }}
+                    >
+                      <Logout />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
+            </Box>
+
             <Box sx={{ flexGrow: 0, display: "flex", gap: "20px" }}>
               <Tooltip title="Open settings">
                 <IconButton
@@ -192,7 +249,7 @@ const Navbar = ({cartItem,setCartItem}) => {
                   sx={{ fontSize: "40px", color: "#ffff" }}
                   onClick={() => handlecartnavigate()}
                 />
-                {cartItem.length}
+                {cartItems?.length || 0}
               </Tooltip>
 
               <Menu
@@ -226,7 +283,8 @@ const Navbar = ({cartItem,setCartItem}) => {
           </Toolbar>
         </Container>
       </AppBar>
-    </div>
+      <CreateTicket open={ticketDialogOpen} onClose={() => setTicketDialogOpen(false)} />
+    </Box>
   );
 };
 

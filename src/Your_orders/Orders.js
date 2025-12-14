@@ -1,39 +1,37 @@
-import axios from 'axios'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import Card from '@mui/material/Card';
-import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import { Container } from '@mui/material';
-import { ShoppingCart } from '@mui/icons-material';
+import { Container, Box, Chip } from '@mui/material';
+import { ShoppingCart, CheckCircle, LocalShipping, Cancel } from '@mui/icons-material';
 import Swal from 'sweetalert2';
+import axios from 'axios';
+import API_BASE_URL, { API_ENDPOINTS } from '../config/api';
 
 const Orders = () => {
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-      getapi();
-    }, [])
+      loadOrders();
+    }, []);
     
-    const[data,setData]=useState("")
-  
-     const getapi = ()=>{
-          axios.get("http://localhost:5000/cart/getcart").then((result) => {
-             console.log(result.data);
-             setData(result.data)
-          }).catch((err) => {
-             console.log(err);
-          });
-     }
-
-     const getYesterdayDate = () => {
-        const date = new Date();
-        date.setDate(date.getDate() - 1); // Subtract one day
-        return date.toDateString(); // Convert to readable format
+    const loadOrders = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('vcart_token');
+            const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.orders.mine}`, {
+                headers: { 'x-auth-token': token }
+            });
+            setOrders(res.data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     }
-
-    const yesterdayDate = getYesterdayDate();
 
     const CancelOrder = (id) => {
       Swal.fire({
@@ -43,83 +41,107 @@ const Orders = () => {
         confirmButtonColor: "#3085d6",
         cancelButtonColor: "#d33",
         confirmButtonText: "Yes, cancel it!"
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
-          axios.delete(`http://localhost:5000/cart/deletecart/${id}`)
-            .then((response) => {
-              console.log(response.data);
-    
-              if (response.data) {
-                Swal.fire({
-                  title: "Order Cancelled..!",
-                  text: "Your money will be refunded soon.",
-                  icon: "success"
+            try {
+                const token = localStorage.getItem('vcart_token');
+                await axios.delete(`${API_BASE_URL}${API_ENDPOINTS.orders.cancel(id)}`, {
+                    headers: { 'x-auth-token': token }
                 });
-                getapi();  
-              }
-            })
-            .catch((error) => {
-              console.error("There was an error deleting the order:", error);
-              Swal.fire({
-                title: "Error!",
-                text: "There was an issue cancelling your order. Please try again.",
-                icon: "error"
-              });
+                Swal.fire({
+                    title: "Order Cancelled!",
+                text: "Your order has been removed.",
+                icon: "success"
             });
+            loadOrders();
+            } catch (err) {
+                Swal.fire({
+                    title: "Error!",
+                    text: "Failed to cancel order.",
+                    icon: "error"
+                });
+            }
         }
       });
     };
+
+  const getStatusIcon = (status) => {
+    const icons = {
+      'Processing': <ShoppingCart />,
+      'Shipped': <LocalShipping />,
+      'Delivered': <CheckCircle />,
+      'Cancelled': <Cancel />
+    };
+    return icons[status] || <ShoppingCart />;
+  };
     
+  if(loading) return <div className="text-center mt-5">Loading Orders...</div>;
 
   return (
   <Container>
-     <h1 className=' fw-bolder mt-3'>Your Orders........</h1>
+     <h1 className=' fw-bolder mt-3'>Your Orders</h1>
 
-    {data.length ? (<>
-    
+    {orders.length > 0 ? (
       <div className=' d-flex flex-column justify-content-center mt-4 '>
-{ data && data.map((val)=>(
-
-      <Container className=' mt-3 mb-5'>
-          <Card sx={{ maxWidth: 1100 }}>
-        <CardMedia
-          sx={{ height: 50 ,width: 50}}
-          image={val.ImageURL}
-          title="green iguana"
-        />
-        <CardContent>
-          <Typography gutterBottom variant="h5" component="div">
-            {val.productname}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-           {`Ordered on : ${yesterdayDate}`}
-          </Typography>
-        </CardContent>
-     <div className=' d-flex justify-content-end gap-4 mb-4  container'>
-     <Button size="small" variant='contained'>Trackorder</Button>
-          <Button size="small" variant='contained' onClick={()=>CancelOrder(val._id)}>CancelOrder</Button>
-     </div>
-        {/* <CardActions>
-      
-        </CardActions> */}
-      </Card>
-      </Container>
-  
-))}
-    </div>
-    
-    </>):(<>
+        {orders.map((order) => (
+           <Container className=' mt-3 mb-5' key={order._id}>
+                <Card sx={{ maxWidth: 1100, padding: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="h6">
+                            Order #{order._id.substring(0, 10)}
+                        </Typography>
+                        <Chip 
+                            icon={getStatusIcon(order.status)}
+                            label={order.status} 
+                            color={order.status === 'Processing' ? 'warning' : order.status === 'Delivered' ? 'success' : order.status === 'Shipped' ? 'info' : 'error'}
+                        />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" className="mb-3">
+                        Placed on: {new Date(order.date).toLocaleString()}
+                    </Typography>
+                    
+                    {order.items.map((val) => (
+                        <div key={val._id} className="d-flex mb-3 align-items-center gap-3 border-bottom pb-2">
+                            <img 
+                                src={val.ImageURL} 
+                                alt={val.productname} 
+                                style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4 }}
+                            />
+                            <div>
+                                <Typography variant="subtitle1" component="div">
+                                    {val.productname}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Price: ${val.price}
+                                </Typography>
+                            </div>
+                        </div>
+                    ))}
+                    
+                    <div className="d-flex justify-content-between align-items-center mt-3">
+                         <Typography variant="h6">
+                            Total: ${order.total}
+                         </Typography>
+                         <div className='d-flex gap-2'>
+                            <Button size="small" variant='contained'>Track Order</Button>
+                            <Button size="small" variant='outlined' color="error" onClick={()=>CancelOrder(order._id)}>Cancel Order</Button>
+                        </div>
+                    </div>
+                </Card>
+           </Container>
+        ))}
+      </div>
+    ) : (
       <div
-              style={{ marginTop: "20%" }}
-              className=" d-flex  justify-content-center align-items-center"
-            >
-              <h2>No Orders Found</h2>
-              <div>
-                <ShoppingCart style={{ fontSize: "80px" }} />
-              </div>
-            </div>
-    </>)}
-
+            style={{ marginTop: "10%" }}
+            className=" d-flex flex-column justify-content-center align-items-center"
+      >
+        <h2>No Orders Found</h2>
+        <div>
+           <ShoppingCart style={{ fontSize: "80px", color: '#ccc' }} />
+        </div>
+      </div>
+    )}
   </Container>
   )
 }

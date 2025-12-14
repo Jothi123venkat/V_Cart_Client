@@ -1,4 +1,3 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardActions from '@mui/material/CardActions';
@@ -6,62 +5,102 @@ import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import Swal from 'sweetalert2';
-import { TextField } from '@mui/material';
-import { Search } from '@mui/icons-material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { TextField, Chip, Rating, Box } from '@mui/material';
+import { Search, Inventory2, Favorite, FavoriteBorder } from '@mui/icons-material';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useProducts } from '../../context/ProductContext';
+import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
+import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
+ import { IconButton, Tooltip } from '@mui/material'; 
 
-const Products = ({ cartItem, setCartItem }) => {
-  const [data, setData] = useState([]);
+const Products = () => {
+  const { products, loading } = useProducts();
+  const { addToCart } = useCart();
   const [keyword, setKeyword] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
+  const [filteredData, setFilteredData] = useState([]);
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [wishlist, setWishlist] = useState([]);
 
   useEffect(() => {
-    getApi();
-  }, [searchParams]);
-
-  const getApi = () => {
-    axios
-      .get(`http://localhost:5000/?${searchParams.toString()}`)
-      .then((result) => {
-        console.log(result.data);
-        if (Array.isArray(result.data)) {
-          setData(result.data);
-        } else {
-          console.error('API response is not an array', result.data);
-          setData([]);
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  };
-
-  const handleCart = (val) => {
-    console.log(val);
-    const itemExist = cartItem.find((item) => item._id === val._id);
-    if (!itemExist) {
-      const updatedCartItem = [...cartItem, val];
-      setCartItem(updatedCartItem);
-      localStorage.setItem("VJ_cart", JSON.stringify(updatedCartItem));
-      Swal.fire({
-        title: "Thank You!",
-        text: `${val.productname} Added to Cart `,
-        icon: "success",
-      });
+    const query = searchParams.get("keyword") || "";
+    if (query) {
+      const lowerQuery = query.toLowerCase();
+      const filtered = products.filter(p => 
+        p.productname.toLowerCase().includes(lowerQuery) ||
+        p.productdescription.toLowerCase().includes(lowerQuery)
+      );
+      setFilteredData(filtered);
     } else {
-      Swal.fire({
-        title: `${val.productname} Already Added to Cart`,
-        icon: "warning",
-      });
+      setFilteredData(products);
+    }
+  }, [searchParams, products]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+        fetchWishlist();
+    }
+  }, [isAuthenticated]);
+
+  const fetchWishlist = async () => {
+    try {
+        const token = localStorage.getItem('vcart_token');
+        const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.user.profile}`, {
+             headers: { 'x-auth-token': token }
+        });
+        // Assuming profile returns populated wishlist or array of IDs. 
+        // Based on User model, it stores ObjectIds. Profile might return populated or not.
+        // Let's assume we map to IDs for checking status
+        const ids = res.data.wishlist.map(w => typeof w === 'object' ? w._id : w);
+        setWishlist(ids);
+    } catch (err) {
+        console.error("Wishlist load error", err);
     }
   };
 
+  const handleToggleWishlist = async (productId) => {
+    if (!isAuthenticated) {
+        navigate('/login');
+        return;
+    }
+    try {
+        const token = localStorage.getItem('vcart_token');
+        await axios.post(`${API_BASE_URL}${API_ENDPOINTS.user.wishlist}/${productId}`, {}, {
+            headers: { 'x-auth-token': token }
+        });
+        // Update local state toggle
+        if (wishlist.includes(productId)) {
+            setWishlist(wishlist.filter(id => id !== productId));
+        } else {
+            setWishlist([...wishlist, productId]);
+        }
+    } catch(err) {
+        console.error("Wishlist toggle fail", err);
+    }
+  };
+
+
   const handleSearch = () => {
-    setSearchParams({ keyword });
+    if(keyword.trim()) {
+      setSearchParams({ keyword });
+    } else {
+      setSearchParams({});
+    }
     setKeyword("");
   };
+
+  const handleBuyNow = (product) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    navigate('/checkout', { state: { items: [product], isBuyNow: true } });
+  };
+
+  if (loading) return <div className="text-center mt-5">Loading Products...</div>;
 
   return (
     <div>
@@ -71,15 +110,24 @@ const Products = ({ cartItem, setCartItem }) => {
           onChange={(e) => setKeyword(e.target.value)}
           value={keyword}
           placeholder='Search items...'
+          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
         />
         <Button variant='contained' onClick={handleSearch}>
           <Search />
         </Button>
       </div>
       <div className='d-flex flex-wrap justify-content-around mt-4'>
-        {data.length > 0 ? (
-          data.map((val) => (
-            <Card sx={{ maxWidth: 345, marginTop: "20px" }} key={val._id}>
+        {filteredData.length > 0 ? (
+          filteredData.map((val) => (
+            <Card sx={{ maxWidth: 345, marginTop: "20px", position: 'relative' }} key={val._id}>
+              <Tooltip title={wishlist.includes(val._id) ? "Remove from Wishlist" : "Add to Wishlist"}>
+                  <IconButton 
+                    sx={{ position: 'absolute', top: 5, right: 5, bgcolor: 'rgba(255,255,255,0.7)' }}
+                    onClick={() => handleToggleWishlist(val._id)}
+                  >
+                      {wishlist.includes(val._id) ? <Favorite color="error" /> : <FavoriteBorder />}
+                  </IconButton>
+              </Tooltip>
               <CardMedia
                 sx={{ height: 220, width: 300 }}
                 image={val.ImageURL}
@@ -92,13 +140,42 @@ const Products = ({ cartItem, setCartItem }) => {
                 <Typography variant="body2" color="text.secondary">
                   {val.productdescription}
                 </Typography>
-                <Typography gutterBottom variant="h5" color="text.secondary" className='mt-3'>
-                  {`Price: ${val.price}`}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                  <Rating value={val.rating || 0} readOnly size="small" />
+                  <Typography variant="caption" color="text.secondary">
+                    ({val.reviewCount || 0} reviews)
+                  </Typography>
+                </Box>
+                <Typography variant="h6" color="primary" className="mt-2">
+                  ${val.price}
                 </Typography>
+                {val.stock !== undefined && (
+                  <Chip 
+                    icon={<Inventory2 />}
+                    label={val.stock > 0 ? `In Stock (${val.stock})` : 'Out of Stock'}
+                    color={val.stock > 0 ? 'success' : 'error'}
+                    size="small"
+                    className="mt-2"
+                  />
+                )}
               </CardContent>
               <CardActions>
-                <Button size="small" variant='contained'>Buy Now</Button>
-                <Button size="small" variant='contained' onClick={() => handleCart(val)}>Add to Cart</Button>
+                <Button 
+                  size="small" 
+                  variant='contained' 
+                  onClick={() => handleBuyNow(val)}
+                  disabled={val.stock === 0}
+                >
+                  Buy Now
+                </Button>
+                <Button 
+                  size="small" 
+                  variant='contained' 
+                  onClick={() => addToCart(val)}
+                  disabled={val.stock === 0}
+                >
+                  Add to Cart
+                </Button>
               </CardActions>
             </Card>
           ))

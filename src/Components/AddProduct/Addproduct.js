@@ -1,19 +1,9 @@
-import React, { useEffect, useState } from "react";
-import Box from "@mui/material/Box";
+import React, { useState } from "react";
 import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
-import FormControl from "@mui/material/FormControl";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import InputLabel from "@mui/material/InputLabel";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
-import Switch from "@mui/material/Switch";
-import { Button, Container, TextField } from "@mui/material";
+import { Button, Container, TextField, Grid, Box, Typography } from "@mui/material";
 import { Controller, useForm } from "react-hook-form";
-import axios from "axios";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -23,157 +13,159 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import { Delete, Update } from "@mui/icons-material";
 import CreateIcon from "@mui/icons-material/Create";
+import { useProducts } from "../../context/ProductContext";
+import Swal from 'sweetalert2';
 
 const Addproduct = () => {
+  const { products, addProduct, updateProduct, deleteProduct, loading } = useProducts();
   const {
     control,
-    register,
     handleSubmit,
     formState: { errors },
     setValue,
+    reset,
+    register
   } = useForm();
+  
   const [open, setOpen] = React.useState(false);
-  const [fullWidth, setFullWidth] = React.useState(true);
-  const [maxWidth, setMaxWidth] = React.useState("sm");
-  const [ImageUrl, setImageUrl] = useState();
-  const [data, setData] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [open2, setOpen2] = React.useState(false);
 
-  let logoselecetdFile = "";
-
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
+  // Dialog Handlers
+  const handleClickOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
+    reset();
   };
-
-
-  const [open2, setOpen2] = React.useState(false);
-  const [fullWidth2, setFullWidth2] = React.useState(true);
-  const [maxWidth2, setMaxWidth2] = React.useState("lg");
-
-  const handleClickOpen2 = () => {
-    setOpen2(true);
-  };
-
+  const handleClickOpen2 = () => setOpen2(true);
   const handleClose2 = () => {
+    console.log('Closing edit dialog and resetting form');
     setOpen2(false);
+    setSelectedProduct(null);
+    reset();
   };
 
-  const onsubmit = (data) => {
-    console.log(data);
-    axios
-      .post("http://localhost:5000/Addproduct", data)
-      .then((result) => {
-        console.log(result.data);
-        handleClose();
-        window.location.reload();
-      })
-      .catch((err) => {
-        console.log(err);
+  // CRUD Operations
+  const onsubmit = async (data) => {
+    console.log('Add product called with data:', data);
+    try {
+      const productData = {
+        productname: data.productname,
+        productdescription: data.productdescription,
+        price: Number(data.price),
+        stock: Number(data.stock) || 0,
+        category: data.category || "Uncategorized",
+        ImageURL: data.ImageURL || ""
+      };
+      
+      console.log('Adding product:', productData);
+      await addProduct(productData);
+      
+      Swal.fire({
+        title: 'Success!',
+        text: 'Product added successfully',
+        icon: 'success',
+        timer: 2000
       });
-  };
-  useEffect(() => {
-    getapi();
-  }, []);
-
-  const getapi = () => {
-    axios
-      .get("http://localhost:5000/", data)
-      .then((result) => {
-        console.log(result.data);
-        setData(result.data);
-      })
-      .catch((err) => {
-        console.log(err);
+      
+      reset();
+      handleClose();
+    } catch (error) {
+      console.error('Add product failed:', error);
+      Swal.fire({
+        title: 'Error!',
+        text: 'Failed to add product',
+        icon: 'error'
       });
-  };
-
-  const handleImageUpload = (event) => {
-    if (event !== null) {
-      if (event.target === undefined) {
-        logoselecetdFile = event;
-      } else {
-        logoselecetdFile = event.target.files[0];
-      }
-      if (logoselecetdFile) {
-        var reader = new FileReader();
-        var imagetype = logoselecetdFile.type;
-        var imagedatatype = imagetype.split("/");
-        var img_crt_type = imagedatatype[1];
-        if (
-          img_crt_type === "jpeg" ||
-          img_crt_type === "jpg" ||
-          img_crt_type === "png"
-        ) {
-          var fileValue = logoselecetdFile;
-          reader.readAsDataURL(logoselecetdFile);
-          reader.onload = () => {
-            var logourl1 = reader.result;
-            var spl = logourl1.split(",");
-            var ImageValue = spl[1];
-            var img_name = fileValue.name;
-            setValue("imageName", img_name);
-            setValue("ImageURL", logourl1);
-
-            // Log the image URL here
-            // console.log("Uploaded Image URL:", logourl1);
-          };
-        }
-      }
     }
   };
 
-  const handledelte = (id) => {
-    axios
-      .delete(`http://localhost:5000/deleteproduct/${id}`)
-      .then(() => {
-        console.log("deleted");
-        window.location.reload();
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+  const handledelte = async (id) => {
+    if(window.confirm("Are you sure you want to delete this product?")) {
+        await deleteProduct(id);
+    }
   };
 
-  const [updateid, setUpdateid] = useState("");
-  const handleupdate = async (id, data) => {
-    handleClickOpen2();                                    
-    axios
-      .get(await `http://localhost:5000/getuser/${id}`)
-      .then((result) => {
-        setSelectedProduct(result.data);
-        setValue("updateproductname", result.data.productname);
-        setValue("updateproductDescription", result.data.productdescription);
-        setValue("updateprice", result.data.price);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+  const handleupdate = (product) => {
+    console.log('=== EDIT PRODUCT CLICKED ===');
+    console.log('Product to edit:', product);
+    
+    setSelectedProduct(product);
+    setValue("updateproductname", product.productname);
+    setValue("updateproductDescription", product.productdescription);
+    setValue("updateprice", product.price);
+    setValue("updatecategory", product.category || "Uncategorized");
+    setValue("ImageURL", product.ImageURL);
+    
+    console.log('Form values set, opening dialog');
+    handleClickOpen2();
   };
 
- 
-  const onsubmitUpdate = (data) => {
-    console.log(data, "updatedata");
-    axios
-      .put(`http://localhost:5000/updateuser/${selectedProduct._id}`, data)
-      .then((result) => {
-        console.log(result.data);
-        handleClose2();
-        getapi();
-      })
-      .catch((err) => {
-        console.log(err);
+  const onSubmit2 = async (data) => {
+    console.log('=== UPDATE PRODUCT STARTED ===');
+    console.log('Form data received:', data);
+    console.log('Selected product:', selectedProduct);
+    
+    try {
+      // Validate we have a product selected
+      if (!selectedProduct || !selectedProduct._id) {
+        console.error('No product selected!');
+        Swal.fire('Error', 'No product selected', 'error');
+        return;
+      }
+
+      // Build update object
+      const updates = {
+        productname: data.updateproductname,
+        productdescription: data.updateproductDescription,
+        price: Number(data.updateprice),
+        category: data.updatecategory || "Uncategorized",
+        ImageURL: data.ImageURL || selectedProduct.ImageURL
+      };
+      
+      console.log('Sending update for product ID:', selectedProduct._id);
+      console.log('Update data:', updates);
+      
+      // Call update function
+      const result = await updateProduct(selectedProduct._id, updates);
+      console.log('Update result:', result);
+      
+      // Show success message
+      await Swal.fire({
+        title: 'Updated!',
+        text: 'Product has been updated successfully',
+        icon: 'success',
+        timer: 2000
       });
+      
+      console.log('=== UPDATE PRODUCT COMPLETED ===');
+      
+      // Close dialog (which will reset form)
+      handleClose2();
+    } catch (error) {
+      console.error('=== UPDATE PRODUCT FAILED ===');
+      console.error('Error details:', error);
+      Swal.fire({
+        title: 'Error!',
+        text: error.message || 'Failed to update product',
+        icon: 'error'
+      });
+    }
   };
 
-  // useEffect(() => {
-  //   const getapi = async()=>{
-  //     axios.get(`localhost:5000/getuser/${id}`)
-  //   }
-  // }, [])
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        setValue("ImageURL", reader.result);
+        // console.log("Image set");
+      };
+    }
+  };
+
+  if(loading) return <div>Loading Admin Panel...</div>;
 
   return (
     <div>
@@ -183,8 +175,6 @@ const Addproduct = () => {
         </Button>
       </div>
 
-      {/* table mui */}
-
       <Container className=" mt-3 ">
         <TableContainer component={Paper}>
           <Table sx={{ minWidth: 650 }} aria-label="simple table">
@@ -192,17 +182,18 @@ const Addproduct = () => {
               <TableRow>
                 <TableCell>NO</TableCell>
                 <TableCell>ProductName</TableCell>
-                <TableCell>ProductDescription</TableCell>
+                <TableCell>Description</TableCell>
                 <TableCell>Price</TableCell>
-                <TableCell>ProductImage</TableCell>
-                <TableCell>Delete</TableCell>
-                <TableCell>Update</TableCell>
+                <TableCell>Stock</TableCell>
+                <TableCell>Category</TableCell>
+                <TableCell>Image</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {data.map((row, index) => (
+              {products.map((row, index) => (
                 <TableRow
-                  key={row.name}
+                  key={row._id || index}
                   sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                 >
                   <TableCell component="th" scope="row">
@@ -210,20 +201,24 @@ const Addproduct = () => {
                   </TableCell>
                   <TableCell>{row.productname}</TableCell>
                   <TableCell>{row.productdescription}</TableCell>
-                  <TableCell>{row.price}</TableCell>
+                  <TableCell>${row.price}</TableCell>
+                  <TableCell>
+                    <Typography fontWeight="bold" color={row.stock === 0 ? 'error' : row.stock <= 10 ? 'warning.main' : 'success.main'}>
+                      {row.stock || 0}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{row.category || 'Uncategorized'}</TableCell>
 
                   <TableCell>
                     <img
                       src={row.ImageURL}
                       alt="img"
-                      style={{ width: "100px" }}
+                      style={{ width: "50px", height: "50px", objectFit: "cover" }}
                     />
                   </TableCell>
                   <TableCell>
-                    <Delete onClick={() => handledelte(row._id)} />
-                  </TableCell>
-                  <TableCell>
-                    <CreateIcon onClick={() => handleupdate(row._id)} />
+                    <Button onClick={() => handledelte(row._id)} color="error"><Delete /></Button>
+                    <Button onClick={() => handleupdate(row)} color="primary"><CreateIcon /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -231,178 +226,174 @@ const Addproduct = () => {
           </Table>
         </TableContainer>
       </Container>
-      <div className="dialog additemdialog">
-        <Dialog
-          fullWidth={fullWidth}
-          maxWidth={maxWidth}
-          open={open}
-          onClose={handleClose}
-        >
-          <DialogTitle className="text-center">Product Upload</DialogTitle>
-          <DialogContent>
-            <div className="mt-4">
-              <form onSubmit={handleSubmit(onsubmit)}>
+
+
+      {/* Add Product Dialog */}
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+        <DialogTitle className="text-center">Product Upload</DialogTitle>
+        <DialogContent>
+          <form onSubmit={handleSubmit(onsubmit)} className="mt-4">
+            <Controller
+              control={control}
+              name="productname"
+              rules={{ required: "Name is required" }}
+              render={({ field }) => (
+                <TextField 
+                    {...field} 
+                    label="Product Name" 
+                    fullWidth 
+                    error={!!errors.productname}
+                    helperText={errors.productname?.message}
+                />
+              )}
+            />
+            <div className="mt-3">
+            <Controller
+              control={control}
+              name="productdescription"
+              rules={{ required: "Description is required" }}
+              render={({ field }) => (
+                <TextField 
+                    {...field} 
+                    label="Description" 
+                    fullWidth 
+                    error={!!errors.productdescription}
+                    helperText={errors.productdescription?.message}
+                />
+              )}
+            />
+            </div>
+            
+            <Grid container spacing={2} className="mt-3">
+              <Grid item xs={12} sm={6}>
                 <Controller
                   control={control}
-                  name="productname"
-                  defaultValue=""
-                  rules={{
-                    required: "ProductName is required",
-                    maxLength: {
-                      value: 20,
-                      message: "only 20 letters are allowed",
-                    },
-                  }}
+                  name="price"
+                  rules={{ required: "Price is required" }}
                   render={({ field }) => (
-                    <>
-                      <TextField
-                        {...field}
-                        label="ProductName"
-                        helperText={
-                          errors.productname && (
-                            <p className="text-danger">
-                              {errors.productname.message}
-                            </p>
-                          )
-                        }
-                        fullWidth
-                      />
-                    </>
+                    <TextField 
+                        {...field} 
+                        type="number" 
+                        label="Price" 
+                        fullWidth 
+                        error={!!errors.price}
+                        helperText={errors.price?.message}
+                    />
                   )}
                 />
-
-                <div className="mt-3">
-                  <Controller
-                    control={control}
-                    name="productdescription"
-                    defaultValue=""
-                    rules={{
-                      required: "ProductDescription is required",
-                      maxLength: {
-                        value: 40,
-                        message: "only 20 letters are allowed",
-                      },
-                    }}
-                    render={({ field }) => (
-                      <>
-                        <TextField
-                          {...field}
-                          label="productdescription"
-                          helperText={
-                            errors.productdescription && (
-                              <p className="text-danger">
-                                {errors.productdescription.message}
-                              </p>
-                            )
-                          }
-                          fullWidth
-                        />
-                      </>
-                    )}
-                  />
-                </div>
-
-                <div className="mt-3">
-                  <Controller
-                    control={control}
-                    name="price"
-                    defaultValue=""
-                    rules={{
-                      required: "price is required",
-                      maxLength: {
-                        value: 10,
-                        message: "only 10 letters are allowed",
-                      },
-                    }}
-                    render={({ field }) => (
-                      <>
-                        <TextField
-                          {...field}
-                          type="number"
-                          label="Price of the product"
-                          fullWidth
-                          helperText={
-                            errors.price && (
-                              <p className="text-danger">
-                                {errors.price.message}
-                              </p>
-                            )
-                          }
-                        />
-                      </>
-                    )}
-                  />
-                </div>
-
-                <div className="mt-4">
-                  <Controller
-                    control={control}
-                    name="ImageURL"
-                    defaultValue=""
-                    rules={{
-                      required: "Product Image is required",
-                    }}
-                    render={({ field }) => (
-                      <>
-                        <label htmlFor="Upload a image"></label>
-                        <input
-                          type="file"
-                          onChange={(e) => handleImageUpload(e)}
-                          helperText={errors}
-                        />
-                      </>
-                    )}
-                  />
-                </div>
-
-                <div className="d-flex justify-content-end">
-                  <Button type="submit">Submit</Button>
-                </div>
-              </form>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Stock Quantity"
+                  type="number"
+                  {...register("stock", { required: true, min: 0 })}
+                  error={!!errors.stock}
+                  helperText={errors.stock ? "Stock is required and must be ≥ 0" : ""}
+                  inputProps={{ min: 0 }}
+                  defaultValue={0}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Category"
+                  {...register("category")}
+                  placeholder="e.g., Electronics, Clothing"
+                  defaultValue="Uncategorized"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <input
+                    accept="image/*"
+                    type="file"
+                    onChange={handleImageUpload}
+                />
+              </Grid>
+            </Grid>
+            
+            <div className="d-flex justify-content-end mt-3">
+              <Button type="submit" variant="contained">Submit</Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      <div className="updateItemdialog">
-        <Dialog
-          fullWidth={fullWidth}
-          maxWidth={maxWidth}
-          open={open2}
-          onClose={handleClose2}
-        >
-          <DialogTitle className=" d-flex justify-content-center">
-            Update Items
-          </DialogTitle>
-          <DialogContent>
-            <form onSubmit={handleSubmit(onsubmitUpdate)}>
-              <div className=" mt-3">
+      {/* Update Product Dialog */}
+      <Dialog open={open2} onClose={handleClose2} fullWidth maxWidth="md">
+        <DialogTitle>Edit Product</DialogTitle>
+        <DialogContent>
+          <form onSubmit={handleSubmit(onSubmit2)}>
+            <Grid container spacing={2} className="mt-2">
+              <Grid item xs={12}>
                 <TextField
-                  label="productName"
                   fullWidth
-                  {...register("updateproductname")}
+                  label="Product Name"
+                  {...register("updateproductname", { required: true })}
+                  error={!!errors.updateproductname}
+                  helperText={errors.updateproductname ? "Product name is required" : ""}
                 />
-              </div>
-              <div className=" mt-3">
+              </Grid>
+              
+              <Grid item xs={12}>
                 <TextField
-                  label="productDescription"
                   fullWidth
-                  {...register("updateproductDescription")}
+                  label="Product Description"
+                  multiline
+                  rows={3}
+                  {...register("updateproductDescription", { required: true })}
+                  error={!!errors.updateproductDescription}
+                  helperText={errors.updateproductDescription ? "Description is required" : ""}
                 />
-              </div>
-              <div className=" mt-3">
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
                 <TextField
-                  TextField
+                  fullWidth
+                  type="number"
                   label="Price"
-                  fullWidth
-                  {...register("updateprice")}
+                  {...register("updateprice", { required: true })}
+                  error={!!errors.updateprice}
+                  helperText={errors.updateprice ? "Price is required" : ""}
                 />
-              </div>
-              <Button type="submit">submit</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Category"
+                  {...register("updatecategory")}
+                  placeholder="e.g., Electronics, Clothing"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Box>
+                  <Typography variant="caption" display="block" gutterBottom>
+                    Product Image
+                  </Typography>
+                  <input
+                    accept="image/*"
+                    type="file"
+                    onChange={handleImageUpload}
+                  />
+                </Box>
+              </Grid>
+            </Grid>
+
+            <div className="d-flex justify-content-end mt-3 gap-2">
+              <Button onClick={handleClose2} variant="outlined">Cancel</Button>
+              <Button 
+                type="submit" 
+                variant="contained"
+                color="primary"
+              >
+                UPDATE PRODUCT
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
