@@ -82,13 +82,13 @@ const FlashSales = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                   <Typography variant="h6" color="error.main" fontWeight="bold">
-                    ${product.price}
+                    ₹{product.price}
                   </Typography>
                   <Typography
                     variant="body2"
                     sx={{ textDecoration: 'line-through', color: 'text.secondary' }}
                   >
-                    ${product.originalPrice}
+                    ₹{product.originalPrice}
                   </Typography>
                 </Box>
                 <Button

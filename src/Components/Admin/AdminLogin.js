@@ -24,9 +24,9 @@ const AdminLogin = () => {
     setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = adminLogin(formData.email, formData.password);
+    const result = await adminLogin(formData.email, formData.password);
     
     if (result.success) {
       navigate('/admin/dashboard');

@@ -50,7 +50,7 @@ const Orders = () => {
                 });
                 Swal.fire({
                     title: "Order Cancelled!",
-                text: "Your order has been removed.",
+                text: "Your order status has been updated to Cancelled.",
                 icon: "success"
             });
             loadOrders();
@@ -112,7 +112,7 @@ const Orders = () => {
                                     {val.productname}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Price: ${val.price}
+                                    Price: ₹{val.price}
                                 </Typography>
                             </div>
                         </div>
@@ -120,7 +120,7 @@ const Orders = () => {
                     
                     <div className="d-flex justify-content-between align-items-center mt-3">
                          <Typography variant="h6">
-                            Total: ${order.total}
+                            Total: ₹{order.total}
                          </Typography>
                          <div className='d-flex gap-2'>
                             <Button size="small" variant='contained'>Track Order</Button>

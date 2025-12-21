@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import apiService from "../services/mockDatabase";
+import axios from 'axios';
 import Swal from "sweetalert2";
+import API_BASE_URL, { API_ENDPOINTS } from "../config/api";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
 
@@ -9,60 +11,132 @@ export const useCart = () => useContext(CartContext);
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth(); // Monitor user state
+
+  const getHeaders = () => {
+      const token = localStorage.getItem('vcart_token');
+      return { 'x-auth-token': token };
+  }
+
+  const loadCart = async () => {
+    if(!user) {
+        setCartItems([]);
+        return;
+    }
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.cart.get}`, {
+          headers: getHeaders()
+      });
+      setCartItems(res.data);
+    } catch (err) {
+      console.error("Load cart error", err);
+    } finally {
+        setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Initial load
-    const loadCart = async () => {
-      const items = await apiService.cart.get();
-      setCartItems(items);
-    };
     loadCart();
-  }, []);
+  }, [user]);
 
   const addToCart = async (product) => {
-    const exists = cartItems.find((item) => item._id === product._id);
-    if (exists) {
-      Swal.fire({
-        title: "Already in Cart",
-        text: `${product.productname} is already in your cart.`,
-        icon: "warning",
-      });
-      return;
+    if(!user) {
+        Swal.fire({
+            title: "Please Login",
+            text: "You need to be logged in to add items to cart",
+            icon: "info"
+        });
+        return;
     }
 
-    const newCart = [...cartItems, product];
-    setCartItems(newCart);
-    await apiService.cart.save(newCart);
-    
-    Swal.fire({
-      title: "Added!",
-      text: `${product.productname} added to cart.`,
-      icon: "success",
-      timer: 1500,
-      showConfirmButton: false
-    });
+    try {
+        const res = await axios.post(`${API_BASE_URL}${API_ENDPOINTS.cart.add}`, 
+            { productId: product._id, quantity: 1 },
+            { headers: getHeaders() }
+        );
+        
+        setCartItems(res.data); // Server returns updated list
+        
+        Swal.fire({
+            title: "Added!",
+            text: `${product.productname} added to cart.`,
+            icon: "success",
+            timer: 1500,
+            showConfirmButton: false
+        });
+    } catch (err) {
+        console.error("Add cart error", err);
+        Swal.fire("Error", "Failed to add to cart", "error");
+    }
   };
 
   const removeFromCart = async (productId) => {
-    const newCart = cartItems.filter((item) => item._id !== productId);
-    setCartItems(newCart);
-    await apiService.cart.save(newCart);
+    try {
+        const res = await axios.delete(`${API_BASE_URL}${API_ENDPOINTS.cart.remove(productId)}`, {
+            headers: getHeaders()
+        });
+        setCartItems(res.data);
+    } catch (err) {
+        console.error("Remove cart error", err);
+    }
   };
 
   const clearCart = async () => {
-    setCartItems([]);
-    await apiService.cart.save([]);
+      try {
+        await axios.delete(`${API_BASE_URL}${API_ENDPOINTS.cart.clear}`, {
+            headers: getHeaders()
+        });
+        setCartItems([]);
+      } catch (err) {
+          console.error("Clear cart error", err);
+      }
   };
 
   const checkout = async () => {
+    // Checkout logic creates an order then clears cart
+    // We already have 'placeOrder' api in some other context? 
+    // Usually checkout calls POST /api/orders.
+    // The previous implementation used apiService.cart.placeOrder which likely did nothing or mock.
+    // Now we should direct user to Checkout page, and Checkout page calls Order API.
+    // OR we do it here. let's keep it here if it's simple or just return generic success.
+    
+    // Actually, Checkout Page usually handles the "Place Order" button.
+    // The CartContext 'checkout' function might just be a utility or trigger.
+    // In previous code: apiService.cart.placeOrder(cartItems) -> sets cart to empty. A bit ambiguous.
+    // Let's assume Checkout Component calls an Order Service. 
+    // For now, I'll allow this function to just navigate or be a placeholder if not used, 
+    // BUT the previous file had it.
+    // Let's implement full integration: create order from cart items.
+    
     setLoading(true);
     try {
-      await apiService.cart.placeOrder(cartItems);
-      setCartItems([]);
+      // Calculate total
+      const total = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+      
+      const orderData = {
+          items: cartItems.map(item => ({
+              productId: item.product._id,
+              productname: item.product.productname,
+              quantity: item.quantity,
+              price: item.product.price,
+              ImageURL: item.product.ImageURL
+          })),
+          total: total,
+          shippingInfo: { address: "Default Address" } // Placeholder, real app should get from form
+      };
+
+      await axios.post(`${API_BASE_URL}${API_ENDPOINTS.orders.place}`, orderData, {
+        headers: getHeaders()
+      });
+      
+      // Clear cart after success
+      await clearCart();
+      
       Swal.fire("Order Placed!", "Your order has been recorded.", "success");
     } catch (error) {
       console.error(error);
-      Swal.fire("Error", "Failed to place order.", "error");
+      Swal.fire("Error", error.response?.data?.msg || "Failed to place order.", "error");
     } finally {
       setLoading(false);
     }

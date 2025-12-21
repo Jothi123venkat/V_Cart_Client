@@ -1,19 +1,18 @@
+ 
+
 import React, { useEffect, useState } from 'react';
-import Card from '@mui/material/Card';
-import CardActions from '@mui/material/CardActions';
-import CardContent from '@mui/material/CardContent';
-import CardMedia from '@mui/material/CardMedia';
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
-import { TextField, Chip, Rating, Box } from '@mui/material';
-import { Search, Inventory2, Favorite, FavoriteBorder } from '@mui/icons-material';
+import { 
+  Card, CardContent, CardMedia, CardActions, Button, Typography, 
+  Grid, Container, Box, Checkbox, FormControlLabel, Slider, 
+  Rating, Divider, TextField, Chip, IconButton, Tooltip 
+} from '@mui/material';
+import { Search, Inventory2, Favorite, FavoriteBorder, FilterList } from '@mui/icons-material';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '../../context/ProductContext';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
- import { IconButton, Tooltip } from '@mui/material'; 
 
 const Products = () => {
   const { products, loading } = useProducts();
@@ -24,25 +23,23 @@ const Products = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [wishlist, setWishlist] = useState([]);
+  
+  // Filters
+  const [priceRange, setPriceRange] = useState([0, 10000]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [minRating, setMinRating] = useState(0);
+
+  // Derived Categories
+  const categories = [...new Set(products.map(p => (p.category || 'Uncategorized').trim()))].filter(Boolean).sort();
 
   useEffect(() => {
     const query = searchParams.get("keyword") || "";
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      const filtered = products.filter(p => 
-        p.productname.toLowerCase().includes(lowerQuery) ||
-        p.productdescription.toLowerCase().includes(lowerQuery)
-      );
-      setFilteredData(filtered);
-    } else {
-      setFilteredData(products);
-    }
-  }, [searchParams, products]);
+    setKeyword(query);
+    applyFilters(query, priceRange, selectedCategories, minRating);
+  }, [searchParams, products, priceRange, selectedCategories, minRating]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-        fetchWishlist();
-    }
+    if (isAuthenticated) fetchWishlist();
   }, [isAuthenticated]);
 
   const fetchWishlist = async () => {
@@ -51,9 +48,6 @@ const Products = () => {
         const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.user.profile}`, {
              headers: { 'x-auth-token': token }
         });
-        // Assuming profile returns populated wishlist or array of IDs. 
-        // Based on User model, it stores ObjectIds. Profile might return populated or not.
-        // Let's assume we map to IDs for checking status
         const ids = res.data.wishlist.map(w => typeof w === 'object' ? w._id : w);
         setWishlist(ids);
     } catch (err) {
@@ -61,7 +55,36 @@ const Products = () => {
     }
   };
 
-  const handleToggleWishlist = async (productId) => {
+  const applyFilters = (search, price, cats, rating) => {
+    let result = products;
+
+    // Search Filter
+    if(search) {
+        const lower = search.toLowerCase();
+        result = result.filter(p => 
+            p.productname.toLowerCase().includes(lower) || 
+            p.productdescription.toLowerCase().includes(lower)
+        );
+    }
+
+    // Price Filter
+    result = result.filter(p => p.price >= price[0] && p.price <= price[1]);
+
+    // Category Filter
+    if(cats.length > 0) {
+        result = result.filter(p => cats.includes(p.category || 'Uncategorized'));
+    }
+
+    // Rating Filter
+    if(rating > 0) {
+        result = result.filter(p => (p.rating || 0) >= rating);
+    }
+
+    setFilteredData(result);
+  };
+
+  const handleToggleWishlist = async (e, productId) => {
+     e.stopPropagation(); // Prevent card click
     if (!isAuthenticated) {
         navigate('/login');
         return;
@@ -71,7 +94,6 @@ const Products = () => {
         await axios.post(`${API_BASE_URL}${API_ENDPOINTS.user.wishlist}/${productId}`, {}, {
             headers: { 'x-auth-token': token }
         });
-        // Update local state toggle
         if (wishlist.includes(productId)) {
             setWishlist(wishlist.filter(id => id !== productId));
         } else {
@@ -82,6 +104,11 @@ const Products = () => {
     }
   };
 
+  const handleCategoryChange = (cat) => {
+      setSelectedCategories(prev => 
+         prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+      );
+  };
 
   const handleSearch = () => {
     if(keyword.trim()) {
@@ -89,101 +116,167 @@ const Products = () => {
     } else {
       setSearchParams({});
     }
-    setKeyword("");
-  };
-
-  const handleBuyNow = (product) => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    navigate('/checkout', { state: { items: [product], isBuyNow: true } });
   };
 
   if (loading) return <div className="text-center mt-5">Loading Products...</div>;
 
   return (
-    <div>
-      <div className='d-flex justify-content-center mt-3'>
-        <TextField
-          size='small'
-          onChange={(e) => setKeyword(e.target.value)}
-          value={keyword}
-          placeholder='Search items...'
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <Button variant='contained' onClick={handleSearch}>
-          <Search />
-        </Button>
-      </div>
-      <div className='d-flex flex-wrap justify-content-around mt-4'>
-        {filteredData.length > 0 ? (
-          filteredData.map((val) => (
-            <Card sx={{ maxWidth: 345, marginTop: "20px", position: 'relative' }} key={val._id}>
-              <Tooltip title={wishlist.includes(val._id) ? "Remove from Wishlist" : "Add to Wishlist"}>
-                  <IconButton 
-                    sx={{ position: 'absolute', top: 5, right: 5, bgcolor: 'rgba(255,255,255,0.7)' }}
-                    onClick={() => handleToggleWishlist(val._id)}
-                  >
-                      {wishlist.includes(val._id) ? <Favorite color="error" /> : <FavoriteBorder />}
-                  </IconButton>
-              </Tooltip>
-              <CardMedia
-                sx={{ height: 220, width: 300 }}
-                image={val.ImageURL}
-                title={val.productname}
-              />
-              <CardContent>
-                <Typography gutterBottom variant="h5" component="div">
-                  {val.productname}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {val.productdescription}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                  <Rating value={val.rating || 0} readOnly size="small" />
-                  <Typography variant="caption" color="text.secondary">
-                    ({val.reviewCount || 0} reviews)
-                  </Typography>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Grid container spacing={3}>
+        {/* Sidebar Filters */}
+        <Grid item xs={12} md={3} sx={{ borderRight: '1px solid #ddd' }}>
+           <Typography variant="h6" gutterBottom sx={{ fontFamily: 'Playfair Display', fontWeight: 'bold' }}><FilterList /> Filters</Typography>
+           
+           {/* Price Filter */}
+           <Box sx={{ mb: 3 }}>
+               <Typography variant="subtitle1" fontWeight="bold" color="primary.main">Price Range</Typography>
+               <Slider
+                    value={priceRange}
+                    onChange={(e, val) => setPriceRange(val)}
+                    valueLabelDisplay="auto"
+                    min={0}
+                    max={2000} // Adjust based on max product price
+               />
+               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                   <Typography variant="body2">₹{priceRange[0]}</Typography>
+                   <Typography variant="body2">₹{priceRange[1]}+</Typography>
+               </Box>
+           </Box>
+           <Divider sx={{ mb: 2 }} />
+
+           {/* Category Filter */}
+           <Box sx={{ mb: 3 }}>
+               <Typography variant="subtitle1" fontWeight="bold" color="primary.main">Category</Typography>
+               {categories.map(cat => (
+                   <FormControlLabel
+                       key={cat}
+                       control={
+                           <Checkbox 
+                               checked={selectedCategories.includes(cat)}
+                               onChange={() => handleCategoryChange(cat)}
+                           />
+                       }
+                       label={cat}
+                       sx={{ display: 'block' }}
+                   />
+               ))}
+           </Box>
+           <Divider sx={{ mb: 2 }} />
+
+           {/* Rating Filter */}
+           <Box sx={{ mb: 3 }}>
+               <Typography variant="subtitle1" fontWeight="bold" color="primary.main">Customer Rating</Typography>
+               {[4, 3, 2, 1].map(star => (
+                   <Box 
+                    key={star} 
+                    sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', mb: 1 }}
+                    onClick={() => setMinRating(star)}
+                   >
+                       <Rating value={star} readOnly size="small" />
+                       <Typography variant="body2" sx={{ ml: 1 }}>& Up</Typography>
+                   </Box>
+               ))}
+           </Box>
+           <Button variant="outlined" fullWidth onClick={() => {
+               setPriceRange([0, 10000]);
+               setSelectedCategories([]);
+               setMinRating(0);
+               setSearchParams({});
+               setKeyword("");
+           }}>
+               Clear Filters
+           </Button>
+        </Grid>
+
+        {/* Product Grid */}
+        <Grid item xs={12} md={9}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">{filteredData.length} Results</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                     <TextField
+                        size='small'
+                        onChange={(e) => setKeyword(e.target.value)}
+                        value={keyword}
+                        placeholder='Search items...'
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    />
+                    <Button variant='contained' onClick={handleSearch}>
+                    <Search />
+                    </Button>
                 </Box>
-                <Typography variant="h6" color="primary" className="mt-2">
-                  ${val.price}
-                </Typography>
-                {val.stock !== undefined && (
-                  <Chip 
-                    icon={<Inventory2 />}
-                    label={val.stock > 0 ? `In Stock (${val.stock})` : 'Out of Stock'}
-                    color={val.stock > 0 ? 'success' : 'error'}
-                    size="small"
-                    className="mt-2"
-                  />
+            </Box>
+
+            <Grid container spacing={3}>
+                {filteredData.length > 0 ? (
+                filteredData.map((val) => (
+                    <Grid item xs={12} sm={6} md={4} key={val._id}>
+                        <Card 
+                            sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', cursor: 'pointer', '&:hover': { boxShadow: 6 } }}
+                            onClick={() => navigate(`/product/${val._id}`)}
+                        >
+                            <Tooltip title={wishlist.includes(val._id) ? "Remove from Wishlist" : "Add to Wishlist"}>
+                                <IconButton 
+                                    sx={{ position: 'absolute', top: 5, right: 5, bgcolor: 'rgba(255,255,255,0.7)', zIndex: 2 }}
+                                    onClick={(e) => handleToggleWishlist(e, val._id)}
+                                >
+                                    {wishlist.includes(val._id) ? <Favorite color="error" /> : <FavoriteBorder />}
+                                </IconButton>
+                            </Tooltip>
+                            <CardMedia
+                                component="img"
+                                height="200"
+                                image={val.ImageURL}
+                                alt={val.productname}
+                                sx={{ objectFit: 'contain', p: 2 }}
+                            />
+                            <CardContent sx={{ flexGrow: 1 }}>
+                                <Typography gutterBottom variant="h6" component="div" noWrap>
+                                {val.productname}
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                    <Rating value={val.rating || 0} readOnly size="small" />
+                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                                        ({val.reviewCount || 0})
+                                    </Typography>
+                                </Box>
+                                <Typography variant="h6" color="primary">
+                                ₹{val.price}
+                                </Typography>
+                                {val.stock !== undefined && (
+                                    <Typography variant="caption" color={val.stock > 0 ? 'success.main' : 'error.main'}>
+                                        {val.stock > 0 ? 'In Stock' : 'Currently Unavailable'}
+                                    </Typography>
+                                )}
+                            </CardContent>
+                            <CardActions sx={{ p: 2, pt: 0 }}>
+                                <Button 
+                                    size="small" 
+                                    variant='contained' 
+                                    fullWidth
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        addToCart(val);
+                                    }}
+                                    disabled={val.stock === 0}
+                                >
+                                Add to Cart
+                                </Button>
+                            </CardActions>
+                        </Card>
+                    </Grid>
+                ))
+                ) : (
+                <Grid item xs={12}>
+                    <Box sx={{ textAlign: 'center', mt: 4 }}>
+                        <Inventory2 sx={{ fontSize: 60, color: '#ccc' }} />
+                        <Typography variant="h6" color="text.secondary">No products match your filters</Typography>
+                    </Box>
+                </Grid>
                 )}
-              </CardContent>
-              <CardActions>
-                <Button 
-                  size="small" 
-                  variant='contained' 
-                  onClick={() => handleBuyNow(val)}
-                  disabled={val.stock === 0}
-                >
-                  Buy Now
-                </Button>
-                <Button 
-                  size="small" 
-                  variant='contained' 
-                  onClick={() => addToCart(val)}
-                  disabled={val.stock === 0}
-                >
-                  Add to Cart
-                </Button>
-              </CardActions>
-            </Card>
-          ))
-        ) : (
-          <Typography variant="h6">No products found</Typography>
-        )}
-      </div>
-    </div>
+            </Grid>
+        </Grid>
+      </Grid>
+    </Container>
   );
 }
 

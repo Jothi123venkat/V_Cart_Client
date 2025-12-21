@@ -11,9 +11,10 @@ import {
   Box,
   CircularProgress,
   IconButton,
-  Alert
+  Alert,
+  InputAdornment
 } from '@mui/material';
-import { ShoppingBag, LocalOffer } from '@mui/icons-material';
+import { ShoppingBag, LocalOffer, CheckCircle } from '@mui/icons-material';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
@@ -36,7 +37,24 @@ const Checkout = () => {
   const [discount, setDiscount] = useState(0);
   const [couponError, setCouponError] = useState('');
 
-  const subtotal = items.reduce((sum, item) => sum + Number(item.price), 0);
+  // Normalize items to handle both Cart structure (nested product) and Buy Now structure (flat product)
+  const normalizedItems = items.map(item => {
+      // Check if it's a cart item structure (has .product) or direct product
+      if (item.product && item.quantity) {
+          return {
+              ...item.product,
+              quantity: item.quantity,
+              _id: item.product._id // Ensure ID is accessible
+          };
+      }
+      // Assume it's a direct product (Buy Now)
+      return {
+          ...item,
+          quantity: item.quantity || 1
+      };
+  });
+
+  const subtotal = normalizedItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
   const total = subtotal - discount;
 
   const handleChange = (e) => {
@@ -46,33 +64,45 @@ const Checkout = () => {
     });
   };
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
+    if (!couponCode) {
+        setCouponError('Please enter a coupon code');
+        return;
+    }
+
     setCouponError('');
+    setLoading(true);
     
-    // Get coupons from localStorage
-    const coupons = JSON.parse(localStorage.getItem('vcart_coupons') || '[]');
-    const coupon = coupons.find(c => c.code === couponCode.toUpperCase() && c.active);
-    
-    if (!coupon) {
-      setCouponError('Invalid or expired coupon code');
-      return;
+    try {
+      const res = await axios.post(`${API_BASE_URL}${API_ENDPOINTS.coupons.validate}`, {
+        code: couponCode,
+        subtotal: subtotal
+      });
+      
+      const { discount: discountVal, type, message } = res.data;
+      
+      // Calculate discount
+      let discountAmount = 0;
+      if (type === 'Percentage') {
+        discountAmount = (subtotal * discountVal) / 100;
+      } else {
+        discountAmount = discountVal;
+      }
+      
+      setDiscount(discountAmount);
+      Swal.fire({
+        title: 'Coupon Applied!',
+        text: message,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      setDiscount(0);
+      setCouponError(err.response?.data?.message || 'Invalid coupon code');
+    } finally {
+      setLoading(false);
     }
-    
-    if (coupon.minPurchase && subtotal < coupon.minPurchase) {
-      setCouponError(`Minimum purchase of $${coupon.minPurchase} required`);
-      return;
-    }
-    
-    // Calculate discount
-    let discountAmount = 0;
-    if (coupon.type === 'Percentage') {
-      discountAmount = (subtotal * coupon.discount) / 100;
-    } else {
-      discountAmount = coupon.discount;
-    }
-    
-    setDiscount(discountAmount);
-    Swal.fire('Success!', `Coupon applied! You saved $${discountAmount.toFixed(2)}`, 'success');
   };
 
   const handleSubmit = async (e) => {
@@ -87,12 +117,12 @@ const Checkout = () => {
     setLoading(true);
     try {
       const orderData = {
-          items: items.map(i => ({
+          items: normalizedItems.map(i => ({
               productname: i.productname,
               price: i.price,
               ImageURL: i.ImageURL,
               productId: i._id,
-              quantity: 1 
+              quantity: i.quantity 
           })),
           total: total,
           shippingInfo: {
@@ -114,7 +144,7 @@ const Checkout = () => {
         title: 'Order Placed Successfully!',
         html: `
           <p>Thank you, <strong>${formData.name}</strong>!</p>
-          <p>Your order of <strong>$${total}</strong> has been confirmed.</p>
+          <p>Your order of <strong>₹${total}</strong> has been confirmed.</p>
           <p>We'll deliver to: ${formData.address}, ${formData.city}</p>
         `,
         icon: 'success',
@@ -153,12 +183,12 @@ const Checkout = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" className="mb-3">Order Summary</Typography>
-              {items.map((item, idx) => (
+              {normalizedItems.map((item, idx) => (
                 <Box key={idx} className="d-flex justify-content-between mb-2 pb-2 border-bottom">
                   <div>
-                    <Typography variant="body1">{item.productname}</Typography>
+                    <Typography variant="body1">{item.productname} (x{item.quantity})</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      ${item.price}
+                      ₹{item.price}
                     </Typography>
                   </div>
                   <img 
@@ -171,17 +201,17 @@ const Checkout = () => {
               <Box className="mt-3 pt-3 border-top">
                 <Typography variant="body1" className="d-flex justify-content-between mb-2">
                   <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
                 </Typography>
                 {discount > 0 && (
                   <Typography variant="body1" className="d-flex justify-content-between mb-2" color="success.main">
                     <span>Discount:</span>
-                    <span>-${discount.toFixed(2)}</span>
+                    <span>-₹{discount.toFixed(2)}</span>
                   </Typography>
                 )}
                 <Typography variant="h6" className="d-flex justify-content-between">
                   <span>Total:</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </Typography>
               </Box>
             </CardContent>
@@ -261,20 +291,30 @@ const Checkout = () => {
                   <Typography variant="subtitle2" className="mb-2">
                     <LocalOffer fontSize="small" /> Have a coupon code?
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                     <TextField
                       size="small"
                       label="Coupon Code"
                       value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      onChange={(e) => {
+                          setCouponCode(e.target.value.toUpperCase());
+                          if(discount > 0) setDiscount(0); // Reset if code changes
+                      }}
                       placeholder="SAVE20"
+                      InputProps={{
+                          endAdornment: discount > 0 ? (
+                              <InputAdornment position="end">
+                                  <CheckCircle color="success" />
+                              </InputAdornment>
+                          ) : null
+                      }}
                     />
-                    <Button variant="outlined" onClick={handleApplyCoupon}>
-                      Apply
+                    <Button variant="outlined" onClick={handleApplyCoupon} disabled={loading}>
+                      {loading ? <CircularProgress size={20} /> : 'Apply'}
                     </Button>
                   </Box>
                   {couponError && <Alert severity="error" className="mt-2">{couponError}</Alert>}
-                  {discount > 0 && <Alert severity="success" className="mt-2">Coupon applied! You saved ${discount.toFixed(2)}</Alert>}
+                  {discount > 0 && <Alert severity="success" className="mt-2">Coupon applied! You saved ₹{discount.toFixed(2)}</Alert>}
                 </Box>
 
                 <Box className="mt-4 d-flex gap-2 justify-content-end">
@@ -291,7 +331,7 @@ const Checkout = () => {
                     size="large"
                     disabled={loading}
                   >
-                    {loading ? <CircularProgress size={24} /> : `Place Order - $${total}`}
+                    {loading ? <CircularProgress size={24} /> : `Place Order - ₹${total}`}
                   </Button>
                 </Box>
               </form>

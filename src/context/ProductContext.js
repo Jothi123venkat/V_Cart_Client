@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import apiService from "../services/mockDatabase";
+
+import axios from 'axios';
+import API_BASE_URL, { API_ENDPOINTS } from '../config/api';
 
 const ProductContext = createContext();
 
@@ -7,15 +9,21 @@ export const useProducts = () => useContext(ProductContext);
 
 export const ProductProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const refreshProducts = async () => {
     setLoading(true);
     try {
-      const data = await apiService.products.getAll();
-      setProducts(data);
+      // Fetch products
+      const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.products.getAll}`); 
+      setProducts(res.data);
+      
+      // Fetch categories
+      const catRes = await axios.get(`${API_BASE_URL}/api/categories`); // Assuming category endpoint isn't fully in helper yet or correct it
+      setCategories(catRes.data);
     } catch (error) {
-      console.error("Failed to fetch products", error);
+      console.error("Failed to fetch data", error);
     } finally {
       setLoading(false);
     }
@@ -26,22 +34,37 @@ export const ProductProvider = ({ children }) => {
   }, []);
 
   const addProduct = async (productData) => {
-    await apiService.products.add(productData);
-    await refreshProducts();
+    try {
+        await axios.post(`${API_BASE_URL}${API_ENDPOINTS.products.add}`, productData);
+        await refreshProducts();
+    } catch (error) {
+        console.error("Add failed", error);
+        throw error;
+    }
   };
 
   const updateProduct = async (id, productData) => {
-    await apiService.products.update(id, productData);
-    await refreshProducts();
+    try {
+        await axios.put(`http://localhost:5000/api/products/${id}`, productData);
+        await refreshProducts();
+    } catch (error) {
+        console.error("Update failed", error);
+        throw error;
+    }
   };
 
   const deleteProduct = async (id) => {
-    await apiService.products.delete(id);
-    await refreshProducts();
+    try {
+        await axios.delete(`http://localhost:5000/api/products/${id}`);
+        await refreshProducts();
+    } catch (error) {
+        console.error("Delete failed", error);
+        throw error;
+    }
   };
 
   return (
-    <ProductContext.Provider value={{ products, loading, addProduct, updateProduct, deleteProduct, refreshProducts }}>
+    <ProductContext.Provider value={{ products, categories, loading, addProduct, updateProduct, deleteProduct, refreshProducts }}>
       {children}
     </ProductContext.Provider>
   );

@@ -17,7 +17,9 @@ const Cart = () => {
   const navigate = useNavigate();
 
   const handleCartDelete = (val) => {
-    removeFromCart(val._id);
+    if (val.product?._id) {
+        removeFromCart(val.product._id);
+    }
   };
 
   const handlePlaceOrder = () => {
@@ -37,7 +39,7 @@ const Cart = () => {
           <>
             {cartItems.map((val, index) => (
               <Card
-                key={val._id + index}
+                key={val._id || index}
                 sx={{
                   maxWidth: 1000,
                   marginTop: "20px",
@@ -48,18 +50,21 @@ const Cart = () => {
               >
                 <CardMedia
                   sx={{ height: 220, width: 300 }}
-                  image={val.ImageURL}
-                  title={val.productname}
+                  image={val.product?.ImageURL}
+                  title={val.product?.productname}
                 />
                 <CardContent>
                   <Typography gutterBottom variant="h5" component="div">
-                    {val.productname}
+                    {val.product?.productname}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {val.productdescription}
+                    {val.product?.productdescription}
                   </Typography>
-                  <Typography gutterBottom variant="h5" color="text.secondary" className="mt-3">
-                     {`Price: $${val.price}`} 
+                  <Typography gutterBottom variant="h6" color="primary" className="mt-2">
+                     {`Price: ₹${val.product?.price}`} 
+                  </Typography>
+                   <Typography variant="body1" className="mt-1">
+                     Quantity: {val.quantity}
                   </Typography>
                 </CardContent>
                 <CardActions className="">
@@ -76,7 +81,7 @@ const Cart = () => {
             ))}
             <div className="mt-4">
               <Typography variant="h5" className="d-flex justify-content-end mb-3">
-                 Total: ${cartItems.reduce((acc, item) => acc + Number(item.price), 0)}
+                 Total: ₹{cartItems.reduce((acc, item) => acc + (Number(item.product?.price || 0) * item.quantity), 0)}
               </Typography>
               <div className=" mt-4 d-flex justify-content-end  mb-5">
                 <Button 

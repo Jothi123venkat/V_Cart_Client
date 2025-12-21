@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -21,17 +21,27 @@ import {
   Chip
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';
+import axios from 'axios';
 import Swal from 'sweetalert2';
 
 const CategoryManagement = () => {
-  const [categories, setCategories] = useState([
-    { id: 1, name: 'Electronics', productCount: 5 },
-    { id: 2, name: 'Clothing', productCount: 3 },
-    { id: 3, name: 'Home & Garden', productCount: 2 }
-  ]);
+  const [categories, setCategories] = useState([]);
   const [open, setOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentCategory, setCurrentCategory] = useState({ id: null, name: '' });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+        const res = await axios.get('http://localhost:5000/api/categories');
+        setCategories(res.data);
+    } catch(err) {
+        console.error(err);
+    }
+  };
 
   const handleOpen = (category = null) => {
     if (category) {
@@ -49,27 +59,25 @@ const CategoryManagement = () => {
     setCurrentCategory({ id: null, name: '' });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!currentCategory.name.trim()) {
       Swal.fire('Error', 'Category name is required', 'error');
       return;
     }
 
-    if (editMode) {
-      setCategories(categories.map(cat => 
-        cat.id === currentCategory.id ? currentCategory : cat
-      ));
-      Swal.fire('Success', 'Category updated successfully', 'success');
-    } else {
-      const newCategory = {
-        ...currentCategory,
-        id: Date.now(),
-        productCount: 0
-      };
-      setCategories([...categories, newCategory]);
-      Swal.fire('Success', 'Category added successfully', 'success');
+    try {
+        if (editMode) {
+          await axios.put(`http://localhost:5000/api/categories/${currentCategory._id}`, { name: currentCategory.name });
+          Swal.fire('Success', 'Category updated successfully', 'success');
+        } else {
+          await axios.post('http://localhost:5000/api/categories', { name: currentCategory.name });
+          Swal.fire('Success', 'Category added successfully', 'success');
+        }
+        fetchCategories();
+        handleClose();
+    } catch(err) {
+        Swal.fire('Error', 'Failed to save category', 'error');
     }
-    handleClose();
   };
 
   const handleDelete = (id) => {
@@ -80,10 +88,15 @@ const CategoryManagement = () => {
       showCancelButton: true,
       confirmButtonColor: '#d33',
       confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        setCategories(categories.filter(cat => cat.id !== id));
-        Swal.fire('Deleted!', 'Category has been deleted.', 'success');
+        try {
+            await axios.delete(`http://localhost:5000/api/categories/${id}`);
+            fetchCategories();
+            Swal.fire('Deleted!', 'Category has been deleted.', 'success');
+        } catch(err) {
+            Swal.fire('Error', 'Failed to delete', 'error');
+        }
       }
     });
   };
@@ -111,17 +124,17 @@ const CategoryManagement = () => {
               </TableHead>
               <TableBody>
                 {categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell>{category.id}</TableCell>
+                  <TableRow key={category._id}>
+                    <TableCell>{category._id}</TableCell>
                     <TableCell>{category.name}</TableCell>
                     <TableCell>
-                      <Chip label={`${category.productCount} products`} size="small" />
+                      <Chip label={`- products`} size="small" />
                     </TableCell>
                     <TableCell>
                       <IconButton color="primary" onClick={() => handleOpen(category)}>
                         <Edit />
                       </IconButton>
-                      <IconButton color="error" onClick={() => handleDelete(category.id)}>
+                      <IconButton color="error" onClick={() => handleDelete(category._id)}>
                         <Delete />
                       </IconButton>
                     </TableCell>

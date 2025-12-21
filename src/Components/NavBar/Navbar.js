@@ -1,288 +1,251 @@
 import * as React from "react";
+import { styled, alpha } from '@mui/material/styles';
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
-import Menu from "@mui/material/Menu";
+import InputBase from '@mui/material/InputBase';
+import Badge from '@mui/material/Badge';
+import MenuItem from '@mui/material/MenuItem';
+import Menu from '@mui/material/Menu';
 import MenuIcon from "@mui/icons-material/Menu";
-import Container from "@mui/material/Container";
-import Avatar from "@mui/material/Avatar";
-import Button from "@mui/material/Button";
-import Tooltip from "@mui/material/Tooltip";
-import MenuItem from "@mui/material/MenuItem";
-import AdbIcon from "@mui/icons-material/Adb";
-import StorefrontIcon from "@mui/icons-material/Storefront";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import { useNavigate } from "react-router-dom";
+import SearchIcon from '@mui/icons-material/Search';
+import AccountCircle from '@mui/icons-material/AccountCircle';
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
+import { useProducts } from "../../context/ProductContext";
 import CreateTicket from '../Support/CreateTicket';
-import { HelpOutline, Logout } from '@mui/icons-material';
+import { HelpOutline, Logout, ArrowDropDown, LocationOn } from '@mui/icons-material';
 import { useState } from "react";
+import Button from "@mui/material/Button";
+import Tooltip from "@mui/material/Tooltip";
+import Container from "@mui/material/Container";
+import AdbIcon from "@mui/icons-material/Adb";
+import StorefrontIcon from "@mui/icons-material/Storefront";
 
+// Amazon-like Styles
+const Search = styled('div')(({ theme }) => ({
+  position: 'relative',
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: alpha(theme.palette.common.white, 1),
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.common.white, 0.9),
+  },
+  marginRight: theme.spacing(2),
+  marginLeft: 0,
+  width: '100%',
+  display: 'flex',
+  [theme.breakpoints.up('sm')]: {
+    marginLeft: theme.spacing(3),
+    width: 'auto',
+    flexGrow: 1,
+  },
+}));
 
-const pages = ["Home", "Products"];
-const settings = ["Profile", "Logout"];
+const SearchIconWrapper = styled('div')(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: '100%',
+  position: 'absolute',
+  right: 0,
+  top: 0,
+  pointerEvents: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#febd69', // Amazon orange
+  color: 'black',
+  borderTopRightRadius: theme.shape.borderRadius,
+  borderBottomRightRadius: theme.shape.borderRadius,
+  cursor: 'pointer',
+  zIndex: 1
+}));
+
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  color: 'inherit',
+  width: '100%',
+  '& .MuiInputBase-input': {
+    padding: theme.spacing(1.5, 6, 1.5, 2), // Vertical padding + font size from searchIcon
+    transition: theme.transitions.create('width'),
+    width: '100%',
+    color: 'black'
+  },
+}));
 
 const Navbar = () => {
   const navigate = useNavigate();
   const { cartItems } = useCart();
   const { user, isAuthenticated, logout } = useAuth();
+  const { products } = useProducts();
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
-  const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
-  const [clickedPage, setClickedpage] = React.useState("");
+  const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-
-  // React.useEffect(() => {
-  //   const CartItemsFromStorage = JSON.parse(localStorage.getItem("VJ_cart"));
-  //   setCartItem(CartItemsFromStorage)
-  //  }, [])
-   
-
-  const handleOpenNavMenu = (event) => {
-    setAnchorElNav(event.currentTarget);
-  };
-  const handleOpenUserMenu = (event) => {
+  const handleProfileMenuOpen = (event) => {
     setAnchorElUser(event.currentTarget);
   };
 
-  const handleCloseNavMenu = () => {
-    setAnchorElNav(null);
-  };
-
-  const handleCloseUserMenu = () => {
+  const handleMenuClose = () => {
     setAnchorElUser(null);
-  };
-  const navi = useNavigate();
-
-  const handlelinkclick = (page) => {
-    console.log(page);
-    setClickedpage(page);
-    if (page === "Products") {
-      navi("/products");
-    } else if (page === "Home") {
-      navi("/");
-    }
+    setMobileMoreAnchorEl(null);
   };
 
-  const handlesettingClick = (setting) => {
-    if (setting === "Admin") {
-      navi("/addproduct");
-    } else if (setting === "Profile") {
-      navi("/profile");
-    } else if (setting === "Logout") {
+  const handleSearch = (e) => {
+      e.preventDefault();
+      if(searchQuery.trim()) {
+          navigate(`/products?search=${searchQuery}`);
+      }
+  }
+  
+  const handleLogout = () => {
       logout();
-      navi("/login");
-    }
-  };
+      handleMenuClose();
+      navigate('/login');
+  }
 
-  const handlecartnavigate = () => {
-    navi("/cart");
-    //  window.location.reload();
-  };
+  const categories = [...new Set(products.map(p => (p.category || 'Uncategorized').trim()))]
+    .filter(Boolean)
+    .sort()
+    .slice(0, 6);
+
+  const menuId = 'primary-search-account-menu';
+  const renderMenu = (
+    <Menu
+      anchorEl={anchorElUser}
+      anchorOrigin={{
+        vertical: 'top',
+        horizontal: 'right',
+      }}
+      id={menuId}
+      keepMounted
+      transformOrigin={{
+        vertical: 'top',
+        horizontal: 'right',
+      }}
+      open={Boolean(anchorElUser)}
+      onClose={handleMenuClose}
+    >
+      {!isAuthenticated ? (
+          <div>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/login'); }}>Login</MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/signup'); }}>Sign Up</MenuItem>
+          </div>
+      ) : (
+          <div>
+            <MenuItem disabled sx={{ opacity: 1, fontWeight: 'bold', color: 'black' }}>Hello, {user?.name}</MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }}>Your Profile</MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/Yourorders'); }}>Your Orders</MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/support'); }}>Support Chat</MenuItem>
+            <MenuItem onClick={handleLogout}>Sign Out</MenuItem>
+          </div>
+      )}
+    </Menu>
+  );
 
   return (
-    <Box>
-      <AppBar position="static" sx={{ background: "#1C448E" }}>
-        <Container maxWidth="xl">
-          <Toolbar disableGutters>
-            <StorefrontIcon
-              sx={{ display: { xs: "none", md: "flex" }, mr: 1 }}
+    <Box sx={{ flexGrow: 1 }}>
+      <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
+        <Toolbar sx={{ minHeight: '60px !important' }}>
+          {/* Mobile Menu Icon */}
+          <IconButton
+            size="large"
+            edge="start"
+            color="inherit"
+            aria-label="open drawer"
+            sx={{ mr: 2, display: { xs: 'flex', md: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
+
+          {/* Logo */}
+          <Typography
+            variant="h6"
+            noWrap
+            component="div"
+            onClick={() => navigate('/')}
+            sx={{ display: { xs: 'none', sm: 'block' }, cursor: 'pointer', fontFamily: 'Arial', fontWeight: 'bold' }}
+          >
+            V-CART
+          </Typography>
+
+          {/* Location (Visual Only) */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', mx: 2, cursor: 'pointer' }}>
+             <Typography variant="caption" sx={{ color: '#ccc', lineHeight: 1 }}>Deliver to</Typography>
+             <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                 <LocationOn sx={{ fontSize: 16 }} />
+                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>India</Typography>
+             </Box>
+          </Box>
+
+          {/* Search Bar */}
+          <Search>
+            <StyledInputBase
+              placeholder="Search V-Cart..."
+              inputProps={{ 'aria-label': 'search' }}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
             />
-            <Typography
-              variant="h6"
-              noWrap
-              component="a"
-              href="/"
-              sx={{
-                mr: 2,
-                display: { xs: "none", md: "flex" },
-                fontFamily: "monospace",
-                fontWeight: 700,
-                letterSpacing: ".3rem",
-                color: "inherit",
-                textDecoration: "none",
-              }}
-            >
-              V-CART
-            </Typography>
+             <Box sx={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 50, bgcolor: 'secondary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 4px 4px 0', cursor: 'pointer' }} onClick={handleSearch}>
+                <SearchIcon sx={{ color: 'white' }} />
+             </Box>
+          </Search>
 
-            <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>
-              <IconButton
-                size="large"
-                aria-label="account of current user"
-                aria-controls="menu-appbar"
-                aria-haspopup="true"
-                onClick={handleOpenNavMenu}
-                color="inherit"
-              >
-                <MenuIcon />
-              </IconButton>
-              <IconButton
-                size="large"
-                color="inherit"
-                onClick={() => setTicketDialogOpen(true)}
-                title="Support"
-              >
-                <HelpOutline />
-              </IconButton>
-              <Menu
-                id="menu-appbar"
-                anchorEl={anchorElNav}
-                anchorOrigin={{
-                  vertical: "bottom",
-                  horizontal: "left",
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: "top",
-                  horizontal: "left",
-                }}
-                open={Boolean(anchorElNav)}
-                onClose={handleCloseNavMenu}
-                sx={{
-                  display: { xs: "block", md: "none" },
-                }}
-              >
-                {pages.map((page) => (
-                  <MenuItem key={page} onClick={handleCloseNavMenu}>
-                    <Typography textAlign="center">{page}</Typography>
-                  </MenuItem>
-                ))}
-              </Menu>
-            </Box>
-            <AdbIcon sx={{ display: { xs: "flex", md: "none" }, mr: 1 }} />
-            <Typography
-              variant="h5"
-              noWrap
-              component="a"
-              href="#app-bar-with-responsive-menu"
-              sx={{
-                mr: 2,
-                display: { xs: "flex", md: "none" },
-                flexGrow: 1,
-                fontFamily: "monospace",
-                fontWeight: 700,
-                letterSpacing: ".3rem",
-                color: "inherit",
-                textDecoration: "none",
-              }}
+          <Box sx={{ flexGrow: 1 }} />
+
+          {/* Desktop Icons */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box 
+                onClick={handleProfileMenuOpen}
+                sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', cursor: 'pointer', '&:hover': { opacity: 0.8 }, p: 1, color: 'white' }}
             >
-              V-CART
-            </Typography>
-            <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
-              {pages.map((page, index) => (
-                <Button
-                  key={page}
-                  onClick={() => handlelinkclick(page)}
-                  sx={{
-                    my: 2,
-                    display: "block",
-                    color: clickedPage === page ? "#1C448E" : "white",
-                    background: clickedPage === page ? "#fff" : "transparent",
-                    ":hover": {
-                      bgcolor: "#4c4cff",
-                      color: "white",
-                    },
-                  }}
+                 <Typography variant="caption" sx={{ lineHeight: 1, color: 'grey.300' }}>Hello, {isAuthenticated ? user?.name : 'Sign in'}</Typography>
+                 <Typography variant="body2" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                    Account & Lists <ArrowDropDown fontSize="small" />
+                 </Typography>
+            </Box>
+
+            <Box 
+                onClick={() => navigate(isAuthenticated ? '/Yourorders' : '/login')}
+                sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', cursor: 'pointer', '&:hover': { opacity: 0.8 }, p: 1, color: 'white' }}
+            >
+                 <Typography variant="caption" sx={{ lineHeight: 1, color: 'grey.300' }}>Returns</Typography>
+                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>& Orders</Typography>
+            </Box>
+
+            <IconButton
+              size="large"
+              aria-label="show cart items"
+              color="inherit"
+              onClick={() => navigate('/cart')}
+            >
+              <Badge badgeContent={cartItems?.length || 0} color="secondary">
+                <ShoppingCartIcon fontSize="large" sx={{ color: 'white' }} />
+              </Badge>
+              <Typography variant="caption" sx={{ mt: 2, fontWeight: 'bold', display: { xs: 'none', md: 'block' } }}>Cart</Typography>
+            </IconButton>
+          </Box>
+        </Toolbar>
+        
+        {/* Secondary Navbar (Categories) */}
+        <Box sx={{ bgcolor: 'primary.light', color: 'white', px: 2, py: 1, display: 'flex', gap: 2, overflowX: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <Button startIcon={<MenuIcon />} sx={{ color: 'white', textTransform: 'none', fontWeight: 'bold' }}>All</Button>
+            {categories.map((cat) => (
+                <Button 
+                    key={cat} 
+                    sx={{ color: 'white', textTransform: 'none', whiteSpace: 'nowrap' }} 
+                    onClick={() => navigate(`/products?keyword=${encodeURIComponent(cat)}`)}
                 >
-                  {page}
+                    {cat}
                 </Button>
-              ))}
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1, mr: 2, alignItems: 'center' }}>
-              {!isAuthenticated ? (
-                <>
-                  <Button 
-                    onClick={() => navigate('/login')}
-                    sx={{ color: 'white', borderColor: 'white' }} 
-                    variant="outlined"
-                  >
-                    Login
-                  </Button>
-                  <Button 
-                    onClick={() => navigate('/signup')}
-                    sx={{ bgcolor: 'white', color: '#1976d2', '&:hover': { bgcolor: '#f5f5f5' } }} 
-                    variant="contained"
-                  >
-                    Sign Up
-                  </Button>
-                </>
-              ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="subtitle1" color="inherit" sx={{ mr: 1, fontWeight: 'bold' }}>
-                    Hello, {user?.name || 'User'}
-                  </Typography>
-                  <Tooltip title="Logout">
-                    <IconButton 
-                      onClick={() => {
-                        logout();
-                        navigate("/login");
-                      }} 
-                      sx={{ color: 'white' }}
-                    >
-                      <Logout />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              )}
-            </Box>
-
-            <Box sx={{ flexGrow: 0, display: "flex", gap: "20px" }}>
-              <Tooltip title="Open settings">
-                <IconButton
-                  onClick={handleOpenUserMenu}
-                  sx={{ p: 0, display: "flex", gap: "20px" }}
-                >
-                  <AccountCircleIcon
-                    sx={{ fontSize: "40px", color: "#ffff" }}
-                  />
-                </IconButton>
-              </Tooltip>
-
-              <Tooltip title="cart">
-                <ShoppingCartIcon
-                  sx={{ fontSize: "40px", color: "#ffff" }}
-                  onClick={() => handlecartnavigate()}
-                />
-                {cartItems?.length || 0}
-              </Tooltip>
-
-              <Menu
-                sx={{ mt: "45px" }}
-                id="menu-appbar"
-                anchorEl={anchorElUser}
-                anchorOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                open={Boolean(anchorElUser)}
-                onClose={handleCloseUserMenu}
-              >
-                {settings.map((setting) => (
-                  <MenuItem key={setting} onClick={handleCloseUserMenu}>
-                    <Typography
-                      textAlign="center"
-                      onClick={() => handlesettingClick(setting)}
-                    >
-                      {setting}
-                    </Typography>
-                  </MenuItem>
-                ))}
-              </Menu>
-            </Box>
-          </Toolbar>
-        </Container>
+            ))}
+            <Button sx={{ color: 'white', textTransform: 'none', whiteSpace: 'nowrap' }} onClick={() => navigate('/products')}>See All Deals</Button>
+        </Box>
       </AppBar>
+      {renderMenu}
       <CreateTicket open={ticketDialogOpen} onClose={() => setTicketDialogOpen(false)} />
     </Box>
   );

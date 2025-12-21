@@ -1,235 +1,141 @@
 import React from 'react';
 import { useForm, Controller } from "react-hook-form";
-import TextField from "@mui/material/TextField";
-import { Button, Typography } from "@mui/material";
-import './Contactus.css';
+import { TextField, Button, Typography, Box, Container, Paper, Grid } from "@mui/material";
 
 const Contactus = () => {
+  const { control, handleSubmit, formState: { errors } } = useForm();
+
   const onSubmit = (data) => {
-    // apiService("posts", data, "unauthpost")
-    //   .then((result) => {
-    //     getApi();
-    //   })
-    //   .catch((err) => {
-    //     console.log(err);
-    //   });
+    console.log("Form Submitted:", data);
+    // Add API logic here
   };
 
-  const { control, handleSubmit, formState } = useForm();
-
   return (
-    <div>
-      <div className="mb-5">
-        <div
-          style={{
-            background: "#1C448E",
-            color: "#fff",
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <h1>Contact us</h1>
-        </div>
-        <form onSubmit={handleSubmit(onSubmit)} className="forms">
-          <Typography variant="h2" gutterBottom className="text-white">
-            Contact us
-          </Typography>
-          <div>
-            <Controller
-              name="name"
-              control={control}
-              defaultValue=""
-              rules={{
-                required: "Name is required",
-                minLength: {
-                  value: 2,
-                  message: "Minimum length is 2 characters",
-                },
-                maxLength: {
-                  value: 20,
-                  message: "Maximum length is 20 characters",
-                },
-              }}
-              render={({ field }) => (
-                <>
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="Name"
-                    margin="normal"
-                    error={!!formState.errors.name}
-                    InputLabelProps={{ className: 'text-white' }}
-                    InputProps={{ className: 'text-white' }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': {
-                          borderColor: 'white',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: 'white',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: 'white',
-                        },
-                      },
-                    }}
-                  />
-                  {formState.errors.name && (
-                    <p className="error-message">
-                      {formState.errors.name.message}
-                    </p>
-                  )}
-                </>
-              )}
-            />
-            <br />
-            <br />
-            <Controller
-              name="email"
-              control={control}
-              defaultValue=""
-              rules={{
-                required: "Email is mandatory",
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i,
-                  message: "Enter a valid email id",
-                },
-              }}
-              render={({ field }) => (
-                <>
-                  <TextField
-                    {...field}
-                    label="Email"
-                    fullWidth
-                    error={!!formState.errors.email}
-                    InputLabelProps={{ className: 'text-white' }}
-                    InputProps={{ className: 'text-white' }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': {
-                          borderColor: 'white',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: 'white',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: 'white',
-                        },
-                      },
-                    }}
-                  />
-                  {formState.errors.email && (
-                    <p className="error-message">
-                      {formState.errors.email.message}
-                    </p>
-                  )}
-                </>
-              )}
-            />
-            <br />
-            <br />
-            <Controller
-              name="phnum"
-              control={control}
-              defaultValue=""
-              rules={{
-                required: "Mobile Number is required",
-                maxLength: {
-                  value: 10,
-                  message: "Only 10 numbers allowed",
-                },
-              }}
-              render={({ field }) => (
-                <>
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="Mobile Number"
-                    type="number"
-                    error={!!formState.errors.phnum}
-                    InputLabelProps={{ className: 'text-white' }}
-                    InputProps={{ className: 'text-white' }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': {
-                          borderColor: 'white',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: 'white',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: 'white',
-                        },
-                      },
-                    }}
-                  />
-                  {formState.errors.phnum && (
-                    <p className="error-message">
-                      {formState.errors.phnum.message}
-                    </p>
-                  )}
-                </>
-              )}
-            />
-            <br />
-            <br />
-            <Controller
-              name="message"
-              control={control}
-              defaultValue=""
-              rules={{
-                required: "Message is required",
-                minLength: {
-                  value: 5,
-                  message: "Min 5 letters",
-                },
-                maxLength: {
-                  value: 30,
-                  message: "Max 30 letters",
-                },
-              }}
-              render={({ field }) => (
-                <>
-                  <TextField
-                    {...field}
-                    label="Message us"
-                    type="text"
-                    multiline
-                    rows={4}
-                    fullWidth
-                    error={!!formState.errors.message}
-                    InputLabelProps={{ className: 'text-white' }}
-                    InputProps={{ className: 'text-white' }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': {
-                          borderColor: 'white',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: 'white',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: 'white',
-                        },
-                      },
-                    }}
-                  />
-                  {formState.errors.message && (
-                    <p className="error-message">
-                      {formState.errors.message.message}
-                    </p>
-                  )}
-                </>
-              )}
-            />
-          </div>
-          <div className=' d-flex  justify-content-end  mt-4 '>
-          <Button type="submit" variant=' contained'>Submit</Button>
+    <Box sx={{ py: 10, bgcolor: 'background.default' }}>
+      <Container maxWidth="lg">
+        <Grid container spacing={4} alignItems="center">
+            {/* Left Side: Contact Info */}
+            <Grid item xs={12} md={5}>
+                <Typography variant="overline" color="secondary" sx={{ letterSpacing: 2, fontWeight: 'bold' }}>
+                    CONTACT US
+                </Typography>
+                <Typography variant="h2" sx={{ fontFamily: 'Playfair Display', mb: 3, fontWeight: 700, color: 'primary.main' }}>
+                   Let's Discuss Your <br/> Next Project
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', lineHeight: 1.8 }}>
+                    Whether you are a professional courtier or a passionate hobbyist, we are here to assist you with the finest materials and tools.
+                </Typography>
+                
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h6" fontWeight="bold">Showroom</Typography>
+                    <Typography variant="body2" color="text.secondary">123 Fashion Avenue, Design District, NY 10012</Typography>
+                </Box>
+                
+                <Box>
+                    <Typography variant="h6" fontWeight="bold">Email Us</Typography>
+                    <Typography variant="body2" color="text.secondary">concierge@v-cart-tailoring.com</Typography>
+                </Box>
+            </Grid>
 
-          </div>
-        </form>
-      </div>
-    </div>
+            {/* Right Side: Form */}
+            <Grid item xs={12} md={7}>
+                <Paper elevation={4} sx={{ p: 5, borderRadius: 2 }}>
+                    <form onSubmit={handleSubmit(onSubmit)}>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <Controller
+                                    name="name"
+                                    control={control}
+                                    defaultValue=""
+                                    rules={{ required: "Name is required" }}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            label="Name"
+                                            fullWidth
+                                            error={!!errors.name}
+                                            helperText={errors.name?.message}
+                                            variant="outlined"
+                                            sx={{ '& .MuiOutlinedInput-root': { '&.Mui-focused fieldset': { borderColor: 'secondary.main' } } }}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Controller
+                                    name="email"
+                                    control={control}
+                                    defaultValue=""
+                                    rules={{ 
+                                        required: "Email is required",
+                                        pattern: { value: /^\S+@\S+$/i, message: "Invalid email" }
+                                    }}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            label="Email"
+                                            fullWidth
+                                            error={!!errors.email}
+                                            helperText={errors.email?.message}
+                                            sx={{ '& .MuiOutlinedInput-root': { '&.Mui-focused fieldset': { borderColor: 'secondary.main' } } }}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Controller
+                                    name="subject"
+                                    control={control}
+                                    defaultValue=""
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            label="Subject"
+                                            fullWidth
+                                            sx={{ '& .MuiOutlinedInput-root': { '&.Mui-focused fieldset': { borderColor: 'secondary.main' } } }}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Controller
+                                    name="message"
+                                    control={control}
+                                    defaultValue=""
+                                    rules={{ required: "Message is required" }}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            label="Message"
+                                            multiline
+                                            rows={4}
+                                            fullWidth
+                                            error={!!errors.message}
+                                            helperText={errors.message?.message}
+                                            sx={{ '& .MuiOutlinedInput-root': { '&.Mui-focused fieldset': { borderColor: 'secondary.main' } } }}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Button 
+                                    type="submit" 
+                                    variant="contained" 
+                                    color="secondary" 
+                                    size="large"
+                                    fullWidth
+                                    sx={{ color: 'white', py: 1.5 }}
+                                >
+                                    Send Message
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </form>
+                </Paper>
+            </Grid>
+        </Grid>
+      </Container>
+    </Box>
   );
 };
 

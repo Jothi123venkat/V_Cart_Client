@@ -3,18 +3,20 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const API_ENDPOINTS = {
   // Product endpoints
+  // Product endpoints (Updated to new REST structure)
   products: {
-    getAll: '/',
-    add: '/Addproduct',
-    update: (id) => `/updateuser/${id}`,
-    delete: (id) => `/deleteproduct/${id}`,
-    getById: (id) => `/getuser/${id}`
+    getAll: '/api/products',
+    add: '/api/products',
+    update: (id) => `/api/products/${id}`,
+    delete: (id) => `/api/products/${id}`,
+    getById: (id) => `/api/products/${id}`
   },
   // Cart/Order endpoints
   cart: {
-    getOrders: '/cart/getcart',
-    placeOrder: '/cart/addcart',
-    cancelOrder: (id) => `/cart/deletecart/${id}`
+    get: '/api/cart',
+    add: '/api/cart/add',
+    remove: (id) => `/api/cart/${id}`,
+    clear: '/api/cart'
   },
   auth: {
     login: '/api/auth/login',
@@ -27,7 +29,6 @@ export const API_ENDPOINTS = {
   },
   admin: {
     users: '/api/admin/users',
-    createUser: '/api/admin/users/create',
     userStatus: (id) => `/api/admin/users/${id}/status`
   },
   orders: {
@@ -36,6 +37,10 @@ export const API_ENDPOINTS = {
     all: '/api/orders/all',
     updateStatus: (id) => `/api/orders/${id}/status`,
     cancel: (id) => `/api/orders/${id}`
+  },
+  coupons: {
+    base: '/api/coupons',
+    validate: '/api/coupons/validate'
   }
 };
 

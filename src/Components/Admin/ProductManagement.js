@@ -261,7 +261,7 @@ const ProductManagement = () => {
                   <TableCell>{row.productdescription}</TableCell>
                   <TableCell>₹{row.price}</TableCell>
                   <TableCell>
-                    <Typography fontWeight="bold" color={row.stock === 0 ? 'error' : row.stock <= 10 ? 'warning.main' : 'success.main'}>
+                    <Typography fontWeight="bold" color={row.stock === 0 ? 'error' : row.stock <= 10 ? 'warning.main' : 'success.main'} >
                       {row.stock || 0}
                     </Typography>
                   </TableCell>
