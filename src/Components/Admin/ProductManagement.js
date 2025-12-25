@@ -1,522 +1,410 @@
-import React, { useState } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import { Button, Container, TextField, Grid, Box, Typography, FormControl, InputLabel, Select, MenuItem, FormHelperText } from "@mui/material";
+import React, { useState, useMemo } from "react";
+import {
+  Button,
+  Container,
+  TextField,
+  Grid,
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip,
+  Chip,
+  Avatar,
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider,
+  Stack,
+  Card,
+  CardContent,
+  CircularProgress
+} from "@mui/material";
+import { 
+  Delete, 
+  Edit, 
+  Add, 
+  Search, 
+  Inventory, 
+  CloudUpload,
+  Category,
+  FilterList,
+  MoreVert,
+  Image as ImageIcon,
+  CheckCircle,
+  Warning
+} from "@mui/icons-material";
 import { Controller, useForm } from "react-hook-form";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
-import { Delete, Update } from "@mui/icons-material";
-import CreateIcon from "@mui/icons-material/Create";
 import { useProducts } from "../../context/ProductContext";
 import Swal from 'sweetalert2';
 
 const ProductManagement = () => {
   const { products, categories, addProduct, updateProduct, deleteProduct, loading } = useProducts();
-  
-  // Separate forms for Add and Update
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
   const {
     control: controlAdd,
     handleSubmit: handleSubmitAdd,
     formState: { errors: errorsAdd },
-    setValue: setValueAdd,
     reset: resetAdd,
-    register: registerAdd
-  } = useForm();
+    register: registerAdd,
+    setValue: setValueAdd
+  } = useForm({
+    defaultValues: {
+        productname: "",
+        productdescription: "",
+        price: "",
+        stock: 0,
+        category: "",
+        material: "",
+        colors: "",
+        sizes: ""
+    }
+  });
 
   const {
-    control: controlUpdate, // Not used much if using register
-    handleSubmit: handleSubmitUpdate,
-    formState: { errors: errorsUpdate },
-    setValue: setValueUpdate,
-    reset: resetUpdate,
-    register: registerUpdate
+    control: controlEdit,
+    handleSubmit: handleSubmitEdit,
+    formState: { errors: errorsEdit },
+    setValue: setValueEdit,
+    reset: resetEdit,
+    register: registerEdit
   } = useForm();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [open, setOpen] = React.useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [open2, setOpen2] = React.useState(false);
+  // Filter products
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => 
+        p.productname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [products, searchTerm]);
 
-  // Dialog Handlers
-  const handleClickOpen = () => setOpen(true);
-  const handleClose = () => {
-    setOpen(false);
-    resetAdd();
-  };
-  const handleClickOpen2 = () => setOpen2(true);
-  const handleClose2 = () => {
-    console.log('Closing edit dialog and resetting form');
-    setOpen2(false);
-    setSelectedProduct(null);
-    resetUpdate();
-  };
+  const handleOpenAdd = () => setOpenAdd(true);
+  const handleCloseAdd = () => { resetAdd(); setOpenAdd(false); };
 
-  // Register ImageURL for Add Form
-  React.useEffect(() => {
-    registerAdd("ImageURL", { required: "Product Image is required" });
-  }, [registerAdd]);
-
-  const onErrorAdd = (errors) => {
-      console.error("Form Validation Errors:", errors);
-      Swal.fire({
-          icon: 'warning',
-          title: 'Validation Error',
-          text: 'Please check the form fields',
-      });
+  const handleOpenEdit = (product) => {
+    setSelectedProduct(product);
+    setValueEdit("productname", product.productname);
+    setValueEdit("productdescription", product.productdescription);
+    setValueEdit("price", product.price);
+    setValueEdit("stock", product.stock);
+    setValueEdit("category", product.category);
+    setValueEdit("ImageURL", product.ImageURL);
+    setOpenEdit(true);
   };
 
-  const onsubmit = async (data) => {
+  const handleCloseEdit = () => { setSelectedProduct(null); resetEdit(); setOpenEdit(false); };
+
+  const onAddSubmit = async (data) => {
     setIsSubmitting(true);
-    console.log('Add product called with data:', data);
     try {
-      const productData = {
-        productname: data.productname,
-        productdescription: data.productdescription,
+      const formattedData = {
+        ...data,
         price: Number(data.price),
-        stock: Number(data.stock) || 0,
-        category: data.category || "Uncategorized",
-        ImageURL: data.ImageURL || "",
-        material: data.material || "",
-        colors: data.colors ? (typeof data.colors === 'string' ? data.colors.split(',') : data.colors) : [],
-        sizes: data.sizes ? (typeof data.sizes === 'string' ? data.sizes.split(',') : data.sizes) : []
+        stock: Number(data.stock),
+        colors: typeof data.colors === 'string' ? data.colors.split(',').map(c => c.trim()) : data.colors,
+        sizes: typeof data.sizes === 'string' ? data.sizes.split(',').map(s => s.trim()) : data.sizes
       };
-      
-      // Clean up arrays
-      if(Array.isArray(productData.colors)) productData.colors = productData.colors.map(c => c.trim());
-      if(Array.isArray(productData.sizes)) productData.sizes = productData.sizes.map(s => s.trim());
-      
-      console.log('Adding product:', productData);
-      await addProduct(productData);
-      
-      Swal.fire({
-        title: 'Success!',
-        text: 'Product added successfully',
-        icon: 'success',
-        timer: 2000
-      });
-      
-      resetAdd();
-      handleClose();
-    } catch (error) {
-      console.error('Add product failed:', error);
-      Swal.fire({
-        title: 'Error!',
-        text: 'Failed to add product. ' + (error.response?.data?.message || error.message),
-        icon: 'error'
-      });
+      await addProduct(formattedData);
+      Swal.fire('Success', 'Product added successfully', 'success');
+      handleCloseAdd();
+    } catch (err) {
+      Swal.fire('Error', err.message || 'Failed to add product', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-
-  const handledelte = async (id) => {
-    if(window.confirm("Are you sure you want to delete this product?")) {
-        await deleteProduct(id);
-    }
-  };
-
-  const handleupdate = (product) => {
-    console.log('=== EDIT PRODUCT CLICKED ===');
-    console.log('Product to edit:', product);
-    
-    setSelectedProduct(product);
-    setValueUpdate("updateproductname", product.productname);
-    setValueUpdate("updateproductDescription", product.productdescription);
-    setValueUpdate("updateprice", product.price);
-    setValueUpdate("updatecategory", product.category || "Uncategorized");
-    setValueUpdate("ImageURL", product.ImageURL);
-    
-    console.log('Form values set, opening dialog');
-    handleClickOpen2();
-  };
-
-  const onSubmit2 = async (data) => {
-    console.log('=== UPDATE PRODUCT STARTED ===');
-    console.log('Form data received:', data);
-    console.log('Selected product:', selectedProduct);
-    
+  const onEditSubmit = async (data) => {
+    setIsSubmitting(true);
     try {
-      // Validate we have a product selected
-      if (!selectedProduct || !selectedProduct._id) {
-        console.error('No product selected!');
-        Swal.fire('Error', 'No product selected', 'error');
-        return;
-      }
-
-      // Build update object
       const updates = {
-        productname: data.updateproductname,
-        productdescription: data.updateproductDescription,
-        price: Number(data.updateprice),
-        category: data.updatecategory || "Uncategorized",
-        ImageURL: data.ImageURL || selectedProduct.ImageURL
+          ...data,
+          price: Number(data.price),
+          stock: Number(data.stock)
       };
-      
-      console.log('Sending update for product ID:', selectedProduct._id);
-      console.log('Update data:', updates);
-      
-      // Call update function
-      const result = await updateProduct(selectedProduct._id, updates);
-      console.log('Update result:', result);
-      
-      // Show success message
-      await Swal.fire({
-        title: 'Updated!',
-        text: 'Product has been updated successfully',
-        icon: 'success',
-        timer: 2000
-      });
-      
-      console.log('=== UPDATE PRODUCT COMPLETED ===');
-      
-      // Close dialog (which will reset form)
-      handleClose2();
-    } catch (error) {
-      console.error('=== UPDATE PRODUCT FAILED ===');
-      console.error('Error details:', error);
-      Swal.fire({
-        title: 'Error!',
-        text: error.message || 'Failed to update product',
-        icon: 'error'
-      });
+      await updateProduct(selectedProduct._id, updates);
+      Swal.fire('Updated', 'Product updated successfully', 'success');
+      handleCloseEdit();
+    } catch (err) {
+      Swal.fire('Error', err.message || 'Failed to update product', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleImageUploadAdd = (event) => {
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Product will be permanently deleted!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteProduct(id);
+        Swal.fire('Deleted!', 'Product has been removed.', 'success');
+      } catch (err) {
+        Swal.fire('Error', 'Failed to delete product', 'error');
+      }
+    }
+  };
+
+  const handleImageUpload = (event, type) => {
     const file = event.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-         Swal.fire('Error', 'Image size must be less than 2MB', 'error');
-         event.target.value = null; 
-         return;
-      }
       const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        setValueAdd("ImageURL", reader.result, { shouldValidate: true });
+      reader.onloadend = () => {
+        if (type === 'add') setValueAdd("ImageURL", reader.result);
+        else setValueEdit("ImageURL", reader.result);
       };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleImageUploadUpdate = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-         Swal.fire('Error', 'Image size must be less than 2MB', 'error');
-         event.target.value = null; 
-         return;
-      }
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        setValueUpdate("ImageURL", reader.result, { shouldValidate: true });
-      };
-    }
+  const getStockChip = (stock) => {
+    if (stock === 0) return <Chip label="Out of Stock" size="small" color="error" variant="outlined" />;
+    if (stock <= 5) return <Chip label={`Low: ${stock}`} size="small" color="warning" variant="outlined" />;
+    return <Chip label={`${stock} In Stock`} size="small" color="success" variant="outlined" />;
   };
 
-  if(loading) return <div>Loading Admin Panel...</div>;
+  if (loading && products.length === 0) return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', p: 10 }}><CircularProgress /></Box>
+  );
 
   return (
-    <div>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mt={3} p={3}>
-        <Typography variant="h4" fontWeight="bold">Product Inventory</Typography>
-        <Button variant="contained" onClick={handleClickOpen} startIcon={<CreateIcon />}>
-          Add New Product
+    <Box sx={{ p: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box>
+            <Typography variant="h4" fontWeight="bold">Product Inventory</Typography>
+            <Typography variant="body2" color="text.secondary">Manage your store's catalog and stock levels.</Typography>
+        </Box>
+        <Button variant="contained" startIcon={<Add />} onClick={handleOpenAdd} sx={{ borderRadius: 2, px: 3 }}>
+            Add Product
         </Button>
       </Box>
 
-      <Container className=" mt-3 ">
-          {/* ... Table Same ... */}
-        <TableContainer component={Paper}>
-          <Table sx={{ minWidth: 650 }} aria-label="simple table">
-            <TableHead>
-              <TableRow>
-                <TableCell>NO</TableCell>
-                <TableCell>ProductName</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell>Price</TableCell>
-                <TableCell>Stock</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Image</TableCell>
-                <TableCell>Actions</TableCell>
+      {/* Filters */}
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+        <CardContent sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+          <TextField
+            placeholder="Search products by name or category..."
+            size="small"
+            fullWidth
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ maxWidth: 500 }}
+          />
+          <Button variant="outlined" startIcon={<FilterList />} color="inherit">Filter</Button>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee', borderRadius: 3 }}>
+        <Table>
+          <TableHead sx={{ bgcolor: '#fbfbfb' }}>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 'bold' }}>Product</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Category</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Price</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Inventory</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredProducts.map((p) => (
+              <TableRow key={p._id} hover>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Avatar variant="rounded" src={p.ImageURL} sx={{ width: 48, height: 48, bgcolor: 'action.hover' }}>
+                        <ImageIcon color="action" />
+                    </Avatar>
+                    <Box>
+                        <Typography variant="body2" fontWeight="bold">{p.productname}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 200, noWrap: true, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {p.productdescription}
+                        </Typography>
+                    </Box>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                    <Chip label={p.category || 'Uncategorized'} size="small" variant="outlined" icon={<Category sx={{ fontSize: '0.8rem !important' }} />} />
+                </TableCell>
+                <TableCell>
+                    <Typography variant="subtitle2" fontWeight="bold">₹{p.price}</Typography>
+                </TableCell>
+                <TableCell>
+                    {getStockChip(p.stock)}
+                </TableCell>
+                <TableCell align="right">
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Tooltip title="Edit">
+                            <IconButton size="small" color="primary" onClick={() => handleOpenEdit(p)}>
+                                <Edit fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                            <IconButton size="small" color="error" onClick={() => handleDelete(p._id)}>
+                                <Delete fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Stack>
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {products.map((row, index) => (
-                <TableRow
-                  key={row._id || index}
-                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-                >
-                  <TableCell component="th" scope="row">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell>{row.productname}</TableCell>
-                  <TableCell>{row.productdescription}</TableCell>
-                  <TableCell>₹{row.price}</TableCell>
-                  <TableCell>
-                    <Typography fontWeight="bold" color={row.stock === 0 ? 'error' : row.stock <= 10 ? 'warning.main' : 'success.main'} >
-                      {row.stock || 0}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{row.category || 'Uncategorized'}</TableCell>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-                  <TableCell>
-                    <img
-                      src={row.ImageURL}
-                      alt="img"
-                      style={{ width: "50px", height: "50px", objectFit: "cover" }}
+      {/* Add Dialog */}
+      <Dialog open={openAdd} onClose={handleCloseAdd} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Add New Product</DialogTitle>
+        <Divider />
+        <DialogContent sx={{ p: 4 }}>
+          <form onSubmit={handleSubmitAdd(onAddSubmit)}>
+            <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                    <Controller
+                        name="productname"
+                        control={controlAdd}
+                        rules={{ required: "Name is required" }}
+                        render={({ field }) => (
+                            <TextField {...field} label="Product Name" fullWidth error={!!errorsAdd.productname} helperText={errorsAdd.productname?.message} variant="outlined" />
+                        )}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <Button onClick={() => handledelte(row._id)} color="error"><Delete /></Button>
-                    <Button onClick={() => handleupdate(row)} color="primary"><CreateIcon /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Container>
-
-
-      {/* Add Product Dialog */}
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-        <DialogTitle className="text-center">Product Upload</DialogTitle>
-        <DialogContent>
-          <form onSubmit={handleSubmitAdd(onsubmit, onErrorAdd)} className="mt-4">
-             {/* ... Form Fields Same ... */}
-             
-            <Controller
-              control={controlAdd}
-              name="productname"
-              rules={{ required: "Name is required" }}
-              render={({ field }) => (
-                <TextField 
-                    {...field} 
-                    label="Product Name" 
-                    fullWidth 
-                    error={!!errorsAdd.productname}
-                    helperText={errorsAdd.productname?.message}
-                />
-              )}
-            />
-            <div className="mt-3">
-            <Controller
-              control={controlAdd}
-              name="productdescription"
-              rules={{ required: "Description is required" }}
-              render={({ field }) => (
-                <TextField 
-                    {...field} 
-                    label="Description" 
-                    fullWidth 
-                    error={!!errorsAdd.productdescription}
-                    helperText={errorsAdd.productdescription?.message}
-                />
-              )}
-            />
-            </div>
-            
-            <Grid container spacing={2} className="mt-3">
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  control={controlAdd}
-                  name="price"
-                  rules={{ required: "Price is required" }}
-                  render={({ field }) => (
-                    <TextField 
-                        {...field} 
-                        type="number" 
-                        label="Price" 
-                        fullWidth 
-                        error={!!errorsAdd.price}
-                        helperText={errorsAdd.price?.message}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Stock Quantity"
-                  type="number"
-                  {...registerAdd("stock", { required: true, min: 0 })}
-                  error={!!errorsAdd.stock}
-                  helperText={errorsAdd.stock ? "Stock is required and must be ≥ 0" : ""}
-                  inputProps={{ min: 0 }}
-                  defaultValue={0}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  control={controlAdd}
-                  name="category"
-                  rules={{ required: "Category is required" }}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <FormControl fullWidth error={!!errorsAdd.category}>
-                      <InputLabel>Category</InputLabel>
-                      <Select {...field} label="Category">
-                        {categories.map((cat) => (
-                          <MenuItem key={cat._id} value={cat.name}>
-                            {cat.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {errorsAdd.category && <FormHelperText>{errorsAdd.category.message}</FormHelperText>}
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                        <InputLabel>Category</InputLabel>
+                        <Controller
+                            name="category"
+                            control={controlAdd}
+                            rules={{ required: "Category is required" }}
+                            render={({ field }) => (
+                                <Select {...field} label="Category">
+                                    {categories.map(c => <MenuItem key={c._id} value={c.name}>{c.name}</MenuItem>)}
+                                </Select>
+                            )}
+                        />
                     </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Material"
-                  {...registerAdd("material", { required: "Material is required" })}
-                  error={!!errorsAdd.material}
-                  helperText={errorsAdd.material?.message}
-                  placeholder="e.g., Silk, Cotton"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Colors (comma separated)"
-                  {...registerAdd("colors", { required: "Colors are required" })}
-                  error={!!errorsAdd.colors}
-                  helperText={errorsAdd.colors?.message}
-                  placeholder="e.g., Red, Blue, Gold"
-                />
-              </Grid>
-               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Sizes (comma separated)"
-                  {...registerAdd("sizes", { required: "Sizes are required" })}
-                  error={!!errorsAdd.sizes}
-                  helperText={errorsAdd.sizes?.message}
-                  placeholder="e.g., S, M, L, 50m, 100m"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Box>
-                  <input
-                      accept="image/*"
-                      type="file"
-                      onChange={handleImageUploadAdd}
-                  />
-                  {errorsAdd.ImageURL && <Typography variant="caption" color="error">{errorsAdd.ImageURL.message}</Typography>}
-                </Box>
-              </Grid>
+                </Grid>
+                <Grid item xs={12}>
+                    <Controller
+                        name="productdescription"
+                        control={controlAdd}
+                        rules={{ required: "Description is required" }}
+                        render={({ field }) => (
+                            <TextField {...field} label="Description" fullWidth multiline rows={3} error={!!errorsAdd.productdescription} helperText={errorsAdd.productdescription?.message} />
+                        )}
+                    />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                    <TextField label="Price" fullWidth type="number" {...registerAdd("price", { required: true })} />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                    <TextField label="Stock" fullWidth type="number" {...registerAdd("stock", { required: true })} />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                    <TextField label="Material" fullWidth {...registerAdd("material")} />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <TextField label="Colors (comma separated)" fullWidth {...registerAdd("colors")} placeholder="Blue, Red, Black" />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <TextField label="Sizes (comma separated)" fullWidth {...registerAdd("sizes")} placeholder="S, M, L, XL" />
+                </Grid>
+                <Grid item xs={12}>
+                    <Box sx={{ border: '2px dashed #eee', p: 3, textAlign: 'center', borderRadius: 2 }}>
+                        <input accept="image/*" type="file" id="add-img" style={{ display: 'none' }} onChange={(e) => handleImageUpload(e, 'add')} />
+                        <label htmlFor="add-img">
+                            <Button component="span" startIcon={<CloudUpload />} sx={{ mb: 1 }}>Upload Product Image</Button>
+                        </label>
+                        <Typography variant="caption" color="text.secondary" display="block">Supported: JPG, PNG, WEBP (Max 2MB)</Typography>
+                        <Controller
+                            name="ImageURL"
+                            control={controlAdd}
+                            render={({ field }) => field.value ? <Box sx={{ mt: 2 }}><img src={field.value} alt="Preview" style={{ width: 100, height: 100, borderRadius: 8, objectFit: 'cover' }} /></Box> : null}
+                        />
+                    </Box>
+                </Grid>
             </Grid>
-            
-            <div className="d-flex justify-content-end mt-3">
-              <Button type="submit" variant="contained" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Submit"}
-              </Button>
-            </div>
           </form>
         </DialogContent>
+        <DialogActions sx={{ p: 3, bgcolor: '#fbfbfb' }}>
+            <Button onClick={handleCloseAdd}>Cancel</Button>
+            <Button variant="contained" onClick={handleSubmitAdd(onAddSubmit)} disabled={isSubmitting}>
+                {isSubmitting ? "Processing..." : "Create Product"}
+            </Button>
+        </DialogActions>
       </Dialog>
 
-      {/* Update Product Dialog */}
-      <Dialog open={open2} onClose={handleClose2} fullWidth maxWidth="md">
-        <DialogTitle>Edit Product</DialogTitle>
-        <DialogContent>
-          <form onSubmit={handleSubmitUpdate(onSubmit2)}>
-             {/* ... Form Fields Same ... */}
-            <Grid container spacing={2} className="mt-2">
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Product Name"
-                  {...registerUpdate("updateproductname", { required: true })}
-                  error={!!errorsUpdate.updateproductname}
-                  helperText={errorsUpdate.updateproductname ? "Product name is required" : ""}
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Product Description"
-                  multiline
-                  rows={3}
-                  {...registerUpdate("updateproductDescription", { required: true })}
-                  error={!!errorsUpdate.updateproductDescription}
-                  helperText={errorsUpdate.updateproductDescription ? "Description is required" : ""}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Price"
-                  {...registerUpdate("updateprice", { required: true })}
-                  error={!!errorsUpdate.updateprice}
-                  helperText={errorsUpdate.updateprice ? "Price is required" : ""}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  control={controlUpdate}
-                  name="updatecategory"
-                  rules={{ required: "Category is required" }}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <FormControl fullWidth error={!!errorsUpdate.updatecategory}>
-                      <InputLabel>Category</InputLabel>
-                      <Select {...field} label="Category">
-                        {categories.map((cat) => (
-                          <MenuItem key={cat._id} value={cat.name}>
-                            {cat.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {errorsUpdate.updatecategory && <FormHelperText>{errorsUpdate.updatecategory.message}</FormHelperText>}
+      {/* Edit Dialog */}
+      <Dialog open={openEdit} onClose={handleCloseEdit} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Edit Product</DialogTitle>
+        <Divider />
+        <DialogContent sx={{ p: 4 }}>
+            <form onSubmit={handleSubmitEdit(onEditSubmit)}>
+                <Stack spacing={3}>
+                    <TextField label="Product Name" fullWidth {...registerEdit("productname", { required: true })} />
+                    <TextField label="Description" fullWidth multiline rows={3} {...registerEdit("productdescription", { required: true })} />
+                    <Grid container spacing={2}>
+                        <Grid item xs={6}><TextField label="Price" fullWidth type="number" {...registerEdit("price", { required: true })} /></Grid>
+                        <Grid item xs={6}><TextField label="Stock" fullWidth type="number" {...registerEdit("stock", { required: true })} /></Grid>
+                    </Grid>
+                    <FormControl fullWidth>
+                        <InputLabel>Category</InputLabel>
+                        <Controller
+                            name="category"
+                            control={controlEdit}
+                            render={({ field }) => (
+                                <Select {...field} label="Category">
+                                    {categories.map(c => <MenuItem key={c._id} value={c.name}>{c.name}</MenuItem>)}
+                                </Select>
+                            )}
+                        />
                     </FormControl>
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Box>
-                  <Typography variant="caption" display="block" gutterBottom>
-                    Product Image
-                  </Typography>
-                  <input
-                    accept="image/*"
-                    type="file"
-                    onChange={handleImageUploadUpdate}
-                  />
-                </Box>
-              </Grid>
-            </Grid>
-
-            <div className="d-flex justify-content-end mt-3 gap-2">
-              <Button onClick={handleClose2} variant="outlined">Cancel</Button>
-              <Button 
-                type="submit" 
-                variant="contained"
-                color="primary"
-              >
-                UPDATE PRODUCT
-              </Button>
-            </div>
-          </form>
+                    <Box sx={{ border: '1px solid #eee', p: 2, borderRadius: 2 }}>
+                        <Typography variant="caption" display="block" gutterBottom>Change Product Image</Typography>
+                        <input accept="image/*" type="file" onChange={(e) => handleImageUpload(e, 'edit')} />
+                    </Box>
+                </Stack>
+            </form>
         </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+            <Button onClick={handleCloseEdit}>Cancel</Button>
+            <Button variant="contained" onClick={handleSubmitEdit(onEditSubmit)} disabled={isSubmitting}>Save Changes</Button>
+        </DialogActions>
       </Dialog>
-    </div>
+    </Box>
   );
 };
 
 export default ProductManagement;
+

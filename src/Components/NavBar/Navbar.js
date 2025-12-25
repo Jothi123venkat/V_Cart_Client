@@ -18,13 +18,20 @@ import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { useProducts } from "../../context/ProductContext";
 import CreateTicket from '../Support/CreateTicket';
-import { HelpOutline, Logout, ArrowDropDown, LocationOn } from '@mui/icons-material';
-import { useState } from "react";
+import { HelpOutline, Logout, ArrowDropDown, LocationOn, Notifications, Circle } from '@mui/icons-material';
+import { useState, useEffect } from "react";
 import Button from "@mui/material/Button";
 import Tooltip from "@mui/material/Tooltip";
 import Container from "@mui/material/Container";
 import AdbIcon from "@mui/icons-material/Adb";
 import StorefrontIcon from "@mui/icons-material/Storefront";
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import axios from 'axios';
+import io from 'socket.io-client';
+import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
 
 // Amazon-like Styles
 const Search = styled('div')(({ theme }) => ({
@@ -83,6 +90,55 @@ const Navbar = () => {
   const [anchorElUser, setAnchorElUser] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [notifications, setNotifications] = useState([]);
+  const [anchorElNotif, setAnchorElNotif] = useState(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadNotifications();
+
+      const socket = io(API_BASE_URL);
+      socket.on('newNotification', ({ userId, notification }) => {
+        if (userId === user?._id) {
+          setNotifications(prev => [notification, ...prev]);
+        }
+      });
+
+      return () => socket.disconnect();
+    }
+  }, [isAuthenticated, user?._id]);
+
+  const loadNotifications = async () => {
+    try {
+      const token = localStorage.getItem('vcart_token');
+      const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.notifications.base}`, {
+        headers: { 'x-auth-token': token }
+      });
+      setNotifications(res.data);
+    } catch (err) {
+      console.error("Load notifications error", err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('vcart_token');
+      await axios.put(`${API_BASE_URL}${API_ENDPOINTS.notifications.markAllRead}`, {}, {
+        headers: { 'x-auth-token': token }
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.error("Mark read error", err);
+    }
+  };
+
+  const handleNotifOpen = (event) => {
+    setAnchorElNotif(event.currentTarget);
+  };
+
+  const handleNotifClose = () => {
+    setAnchorElNotif(null);
+  };
 
   const handleProfileMenuOpen = (event) => {
     setAnchorElUser(event.currentTarget);
@@ -138,9 +194,70 @@ const Navbar = () => {
             <MenuItem disabled sx={{ opacity: 1, fontWeight: 'bold', color: 'black' }}>Hello, {user?.name}</MenuItem>
             <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }}>Your Profile</MenuItem>
             <MenuItem onClick={() => { handleMenuClose(); navigate('/Yourorders'); }}>Your Orders</MenuItem>
-            <MenuItem onClick={() => { handleMenuClose(); navigate('/support'); }}>Support Chat</MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/support'); }}>Support History</MenuItem>
             <MenuItem onClick={handleLogout}>Sign Out</MenuItem>
           </div>
+      )}
+    </Menu>
+  );
+
+  const notifId = 'notification-menu';
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const renderNotifMenu = (
+    <Menu
+      anchorEl={anchorElNotif}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      id={notifId}
+      keepMounted
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      open={Boolean(anchorElNotif)}
+      onClose={handleNotifClose}
+      PaperProps={{
+        style: { width: 320, maxHeight: 400 }
+      }}
+    >
+      <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="subtitle1" fontWeight="bold">Notifications</Typography>
+        {unreadCount > 0 && (
+          <Button size="small" onClick={markAllAsRead}>Mark all read</Button>
+        )}
+      </Box>
+      <Divider />
+      <List sx={{ p: 0 }}>
+        {notifications.length > 0 ? (
+          notifications.map((n) => (
+            <MenuItem 
+              key={n._id} 
+              onClick={() => { navigate(n.link || '/support'); handleNotifClose(); }}
+              sx={{ 
+                bgcolor: n.isRead ? 'transparent' : 'action.hover',
+                borderLeft: n.isRead ? 'none' : '4px solid #febd69',
+                mb: 0.5,
+                whiteSpace: 'normal'
+              }}
+            >
+              <ListItemText
+                primary={n.title}
+                secondary={
+                  <React.Fragment>
+                    <Typography variant="body2" color="text.primary">{n.message}</Typography>
+                    <Typography variant="caption" color="text.secondary">{new Date(n.date).toLocaleString()}</Typography>
+                  </React.Fragment>
+                }
+              />
+            </MenuItem>
+          ))
+        ) : (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">No notifications</Typography>
+          </Box>
+        )}
+      </List>
+      {notifications.length > 0 && (
+          <Box sx={{ p: 1, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
+            <Button fullWidth size="small" onClick={() => { navigate('/profile'); handleNotifClose(); }}>View All</Button>
+          </Box>
       )}
     </Menu>
   );
@@ -216,6 +333,14 @@ const Navbar = () => {
                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>& Orders</Typography>
             </Box>
 
+            {isAuthenticated && (
+              <IconButton color="inherit" onClick={handleNotifOpen}>
+                <Badge badgeContent={unreadCount} color="error">
+                  <Notifications />
+                </Badge>
+              </IconButton>
+            )}
+
             <IconButton
               size="large"
               aria-label="show cart items"
@@ -246,6 +371,7 @@ const Navbar = () => {
         </Box>
       </AppBar>
       {renderMenu}
+      {renderNotifMenu}
       <CreateTicket open={ticketDialogOpen} onClose={() => setTicketDialogOpen(false)} />
     </Box>
   );

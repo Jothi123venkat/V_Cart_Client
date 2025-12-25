@@ -9,10 +9,16 @@ import { ShoppingCart, CheckCircle, LocalShipping, Cancel } from '@mui/icons-mat
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import API_BASE_URL, { API_ENDPOINTS } from '../config/api';
+import CreateTicket from '../Components/Support/CreateTicket';
+import TrackOrder from './TrackOrder';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [supportDialogOpen, setSupportDialogOpen] = useState(false);
+    const [selectedOrderForSupport, setSelectedOrderForSupport] = useState(null);
+    const [trackDialogOpen, setTrackDialogOpen] = useState(false);
+    const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
 
     useEffect(() => {
       loadOrders();
@@ -74,6 +80,79 @@ const Orders = () => {
     };
     return icons[status] || <ShoppingCart />;
   };
+
+  const handleSupportClick = (orderId) => {
+    setSelectedOrderForSupport(orderId);
+    setSupportDialogOpen(true);
+  };
+
+  const handleTrackClick = (order) => {
+    setSelectedOrderForTracking(order);
+    setTrackDialogOpen(true);
+  };
+
+  const handleDownloadInvoice = (order) => {
+    const invoiceWindow = window.open('', '_blank');
+    const itemsHtml = order.items.map(item => `
+      <tr>
+        <td>${item.productname}</td>
+        <td>${item.quantity}</td>
+        <td>₹${item.price}</td>
+        <td>₹${item.price * item.quantity}</td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <html>
+        <head>
+          <title>Invoice - ${order._id}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+            .logo { font-size: 24px; font-weight: bold; color: #1976d2; }
+            .invoice-info { text-align: right; }
+            table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+            th { background: #f8f9fa; text-align: left; padding: 12px; border-bottom: 2px solid #eee; }
+            td { padding: 12px; border-bottom: 1px solid #eee; }
+            .totals { margin-top: 40px; text-align: right; font-size: 18px; }
+            .grand-total { font-weight: bold; color: #1976d2; font-size: 24px; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="no-print" style="margin-bottom: 20px; text-align: center;">
+            <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer; background: #1976d2; color: white; border: none; border-radius: 4px;">Print / Save as PDF</button>
+          </div>
+          <div class="header">
+            <div class="logo">V-CART</div>
+            <div class="invoice-info">
+              <strong>INVOICE</strong><br>
+              Order: #${order._id.toUpperCase()}<br>
+              Date: ${new Date(order.date).toLocaleDateString()}
+            </div>
+          </div>
+          <div style="margin-top: 20px;">
+            <strong>Shipping To:</strong><br>
+            ${order.shippingInfo?.name || 'Customer'}<br>
+            ${order.shippingInfo?.address || 'N/A'}<br>
+            ${order.shippingInfo?.city || ''}, ${order.shippingInfo?.zipCode || ''}
+          </div>
+          <table>
+            <thead>
+              <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+          <div class="totals">
+            <div>Subtotal: ₹${order.total}</div>
+            <div class="grand-total">Total: ₹${order.total}</div>
+          </div>
+        </body>
+      </html>
+    `;
+    invoiceWindow.document.write(html);
+    invoiceWindow.document.close();
+  };
     
   if(loading) return <div className="text-center mt-5">Loading Orders...</div>;
 
@@ -123,7 +202,9 @@ const Orders = () => {
                             Total: ₹{order.total}
                          </Typography>
                          <div className='d-flex gap-2'>
-                            <Button size="small" variant='contained'>Track Order</Button>
+                            <Button size="small" variant='contained' onClick={() => handleTrackClick(order)}>Track Order</Button>
+                            <Button size="small" variant='outlined' color="primary" onClick={() => handleDownloadInvoice(order)}>Invoice</Button>
+                            <Button size="small" variant='outlined' color="primary" onClick={() => handleSupportClick(order._id)}>Support</Button>
                             <Button size="small" variant='outlined' color="error" onClick={()=>CancelOrder(order._id)}>Cancel Order</Button>
                         </div>
                     </div>
@@ -142,6 +223,16 @@ const Orders = () => {
         </div>
       </div>
     )}
+    <CreateTicket 
+        open={supportDialogOpen} 
+        onClose={() => setSupportDialogOpen(false)} 
+        orderId={selectedOrderForSupport}
+    />
+    <TrackOrder 
+        open={trackDialogOpen} 
+        onClose={() => setTrackDialogOpen(false)} 
+        order={selectedOrderForTracking}
+    />
   </Container>
   )
 }

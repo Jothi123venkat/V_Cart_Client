@@ -6,7 +6,7 @@ import {
   Grid, Container, Box, Checkbox, FormControlLabel, Slider, 
   Rating, Divider, TextField, Chip, IconButton, Tooltip 
 } from '@mui/material';
-import { Search, Inventory2, Favorite, FavoriteBorder, FilterList } from '@mui/icons-material';
+import { Search, Inventory2, Favorite, FavoriteBorder, FilterList, FlashOn, ShoppingCart } from '@mui/icons-material';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '../../context/ProductContext';
 import { useCart } from '../../context/CartContext';
@@ -108,6 +108,14 @@ const Products = () => {
       setSelectedCategories(prev => 
          prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
       );
+  };
+
+  const handleBuyNow = (product) => {
+    if (!isAuthenticated) {
+        navigate('/login');
+        return;
+    }
+    navigate('/checkout', { state: { items: [{ product, quantity: 1 }], isBuyNow: true } });
   };
 
   const handleSearch = () => {
@@ -248,18 +256,35 @@ const Products = () => {
                                     </Typography>
                                 )}
                             </CardContent>
-                            <CardActions sx={{ p: 2, pt: 0 }}>
+                            <CardActions sx={{ p: 2, pt: 0, flexDirection: 'column', gap: 1 }}>
                                 <Button 
                                     size="small" 
                                     variant='contained' 
                                     fullWidth
+                                    startIcon={<ShoppingCart />}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         addToCart(val);
                                     }}
                                     disabled={val.stock === 0}
+                                    sx={{ borderRadius: 1.5 }}
                                 >
-                                Add to Cart
+                                {val.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                                </Button>
+                                <Button 
+                                    size="small" 
+                                    variant='contained' 
+                                    color="warning"
+                                    fullWidth
+                                    startIcon={<FlashOn />}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleBuyNow(val);
+                                    }}
+                                    disabled={val.stock === 0}
+                                    sx={{ bgcolor: '#fa8900', borderRadius: 1.5, '&:hover': { bgcolor: '#e67e00' } }}
+                                >
+                                {val.stock === 0 ? "Out of Stock" : "Buy Now"}
                                 </Button>
                             </CardActions>
                         </Card>

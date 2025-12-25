@@ -29,18 +29,31 @@ export const API_ENDPOINTS = {
   },
   admin: {
     users: '/api/admin/users',
+    getById: (id) => `/api/admin/users/${id}`,
     userStatus: (id) => `/api/admin/users/${id}/status`
   },
   orders: {
     place: '/api/orders',
     mine: '/api/orders/myorders',
     all: '/api/orders/all',
+    getUserOrders: (id) => `/api/orders/user/${id}`,
     updateStatus: (id) => `/api/orders/${id}/status`,
     cancel: (id) => `/api/orders/${id}`
+  },
+  notifications: {
+    base: '/api/notifications',
+    markRead: (id) => `/api/notifications/${id}/read`,
+    markAllRead: '/api/notifications/read-all'
   },
   coupons: {
     base: '/api/coupons',
     validate: '/api/coupons/validate'
+  },
+  tickets: {
+    base: '/api/tickets',
+    mine: '/api/tickets/my',
+    admin: '/api/tickets/admin',
+    respond: (id) => `/api/tickets/${id}/respond`
   }
 };
 

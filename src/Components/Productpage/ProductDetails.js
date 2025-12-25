@@ -129,17 +129,17 @@ const ProductDetails = () => {
                             {product.stock > 0 ? "In Stock" : "Currently Unavailable"}
                         </Typography>
                         
-                        <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                             <Button 
                                 variant="contained" 
-                                color="warning" 
+                                color="primary" 
                                 fullWidth 
                                 startIcon={<ShoppingCart />}
                                 onClick={() => addToCart(product)}
                                 disabled={product.stock === 0}
-                                sx={{ borderRadius: 20 }}
+                                sx={{ borderRadius: 1.5 }}
                             >
-                                Add to Cart
+                                {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
                             </Button>
                             <Button 
                                 variant="contained" 
@@ -148,9 +148,9 @@ const ProductDetails = () => {
                                 startIcon={<FlashOn />}
                                 onClick={handleBuyNow}
                                 disabled={product.stock === 0}
-                                sx={{ borderRadius: 20, bgcolor: '#fa8900' }}
+                                sx={{ borderRadius: 1.5, bgcolor: '#fa8900', '&:hover': { bgcolor: '#e67e00' } }}
                             >
-                                Buy Now
+                                {product.stock === 0 ? "Out of Stock" : "Buy Now"}
                             </Button>
                         </Box>
 

@@ -10,13 +10,17 @@ import {
   Button,
   Chip
 } from '@mui/material';
-import { LocalOffer, Timer } from '@mui/icons-material';
+import { LocalOffer, Timer, FlashOn, ShoppingCart } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useProducts } from '../../context/ProductContext';
+import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 
 const FlashSales = () => {
   const navigate = useNavigate();
   const { products } = useProducts();
+  const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const [timeLeft, setTimeLeft] = useState(3600); // 1 hour countdown
 
   useEffect(() => {
@@ -40,6 +44,14 @@ const FlashSales = () => {
     price: (p.price * 0.8).toFixed(2),
     discount: 20
   }));
+
+  const handleBuyNow = (product) => {
+    if (!isAuthenticated) {
+        navigate('/login');
+        return;
+    }
+    navigate('/checkout', { state: { items: [{ product, quantity: 1 }], isBuyNow: true } });
+  };
 
   if (flashSaleProducts.length === 0) return null;
 
@@ -91,15 +103,30 @@ const FlashSales = () => {
                     ₹{product.originalPrice}
                   </Typography>
                 </Box>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  color="error"
-                  sx={{ mt: 2 }}
-                  onClick={() => navigate('/products')}
-                >
-                  Buy Now
-                </Button>
+                <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<ShoppingCart />}
+                    onClick={() => addToCart(product)}
+                    disabled={product.stock === 0}
+                    sx={{ borderRadius: 1.5 }}
+                  >
+                    {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="warning"
+                    startIcon={<FlashOn />}
+                    sx={{ bgcolor: '#fa8900', borderRadius: 1.5, '&:hover': { bgcolor: '#e67e00' } }}
+                    onClick={() => handleBuyNow(product)}
+                    disabled={product.stock === 0}
+                  >
+                    {product.stock === 0 ? "Out of Stock" : "Buy Now"}
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
           </Grid>

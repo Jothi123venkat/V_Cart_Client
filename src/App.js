@@ -25,7 +25,8 @@ import OrderManagement from './Components/Admin/OrderManagement'
 import PromotionManagement from './Components/Admin/PromotionManagement'
 import Analytics from './Components/Admin/Analytics'
 import UserManagement from './Components/Admin/UserManagement'
-import SupportManagement from './Components/Admin/SupportManagement'
+import AdminTickets from './Components/Admin/AdminTickets'
+import SupportPage from './Components/Support/SupportPage';
 import InventoryManagement from './Components/Admin/InventoryManagement'
 import Footer from './Components/Footer/Footer';
 
@@ -83,6 +84,11 @@ const App = () => {
                   <UserProfile />
                 </ProtectedUserRoute>
               } />
+              <Route path="/support" element={
+                <ProtectedUserRoute>
+                  <SupportPage />
+                </ProtectedUserRoute>
+              } />
             </Route>
             
             {/* Admin Routes (No Navbar/Footer) */}
@@ -99,7 +105,7 @@ const App = () => {
               <Route path="promotions" element={<PromotionManagement />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="users" element={<UserManagement />} />
-              <Route path="support" element={<SupportManagement />} />
+              <Route path="support" element={<AdminTickets />} />
               <Route path="inventory" element={<InventoryManagement />} />
             </Route>
 
