@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { Container, Paper, TextField, Button, Typography, Box, Alert, CircularProgress } from '@mui/material';
+import { Container, Paper, TextField, Button, Typography, Box, CircularProgress } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
-import { API_BASE_URL } from '../../config/api'; // Ensure you have this config or use direct URL
+import toast from '../../utils/toast';
 
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -25,22 +24,21 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
-      // Direct API call
-      // You'll need to replace URL with your actual backend URL if different
       const response = await axios.post('http://localhost:5000/api/auth/login', formData);
       
       const { user, token } = response.data;
       login(user, token);
+      toast.success(`Welcome back, ${user.name}!`);
       
       // Redirect to home or previous page
       navigate('/');
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Failed to login. Please check your credentials.');
+      const errorMsg = err.response?.data?.message || 'Failed to login. Please check your credentials.';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -73,12 +71,6 @@ const Login = () => {
             <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
               Sign in to manage your tailoring supplies
             </Typography>
-
-            {error && (
-              <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-                {error}
-              </Alert>
-            )}
 
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
               <TextField

@@ -1,54 +1,56 @@
 import * as React from "react";
-import { styled, alpha } from '@mui/material/styles';
-import AppBar from "@mui/material/AppBar";
-import Box from "@mui/material/Box";
-import Toolbar from "@mui/material/Toolbar";
-import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
-import InputBase from '@mui/material/InputBase';
-import Badge from '@mui/material/Badge';
-import MenuItem from '@mui/material/MenuItem';
-import Menu from '@mui/material/Menu';
-import MenuIcon from "@mui/icons-material/Menu";
-import SearchIcon from '@mui/icons-material/Search';
-import AccountCircle from '@mui/icons-material/AccountCircle';
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import { styled, alpha, useTheme } from '@mui/material/styles';
+import {
+  AppBar, Box, Toolbar, IconButton, Typography, InputBase, Badge,
+  MenuItem, Menu, Button, Tooltip, Divider, List, ListItemText,
+  Drawer, useMediaQuery
+} from '@mui/material';
+import {
+  Menu as MenuIcon, Search as SearchIcon, ShoppingCart as ShoppingCartIcon,
+  Person, Notifications, FavoriteBorder, Close, ArrowDropDown
+} from '@mui/icons-material';
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { useProducts } from "../../context/ProductContext";
-import CreateTicket from '../Support/CreateTicket';
-import { HelpOutline, Logout, ArrowDropDown, LocationOn, Notifications, Circle } from '@mui/icons-material';
 import { useState, useEffect } from "react";
-import Button from "@mui/material/Button";
-import Tooltip from "@mui/material/Tooltip";
-import Container from "@mui/material/Container";
-import AdbIcon from "@mui/icons-material/Adb";
-import StorefrontIcon from "@mui/icons-material/Storefront";
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
-import Divider from '@mui/material/Divider';
 import axios from 'axios';
 import io from 'socket.io-client';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
+import ThemeToggle from '../Shared/ThemeToggle';
+import CreateTicket from '../Support/CreateTicket';
 
-// Amazon-like Styles
+// Modern Search Bar with Glassmorphism
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.white, 1),
+  borderRadius: 12,
+  backgroundColor: theme.palette.mode === 'light' 
+    ? alpha(theme.palette.common.white, 0.95)
+    : alpha(theme.palette.background.paper, 0.95),
+  backdropFilter: 'blur(10px)',
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.common.white, 0.9),
+    boxShadow: theme.palette.mode === 'light'
+      ? '0 4px 20px rgba(99, 102, 241, 0.15)'
+      : '0 4px 20px rgba(129, 140, 248, 0.25)',
+    borderColor: theme.palette.primary.main,
+  },
+  '&:focus-within': {
+    boxShadow: theme.palette.mode === 'light'
+      ? '0 4px 20px rgba(99, 102, 241, 0.2)'
+      : '0 4px 20px rgba(129, 140, 248, 0.3)',
+    borderColor: theme.palette.primary.main,
+    transform: 'translateY(-2px)',
   },
   marginRight: theme.spacing(2),
   marginLeft: 0,
   width: '100%',
-  display: 'flex',
   [theme.breakpoints.up('sm')]: {
     marginLeft: theme.spacing(3),
     width: 'auto',
     flexGrow: 1,
+    maxWidth: 600,
   },
 }));
 
@@ -58,52 +60,69 @@ const SearchIconWrapper = styled('div')(({ theme }) => ({
   position: 'absolute',
   right: 0,
   top: 0,
-  pointerEvents: 'none',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  backgroundColor: '#febd69', // Amazon orange
-  color: 'black',
-  borderTopRightRadius: theme.shape.borderRadius,
-  borderBottomRightRadius: theme.shape.borderRadius,
+  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+  color: 'white',
+  borderTopRightRadius: 12,
+  borderBottomRightRadius: 12,
   cursor: 'pointer',
-  zIndex: 1
+  width: 50,
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`,
+  },
 }));
 
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
-  color: 'inherit',
+  color: theme.palette.text.primary,
   width: '100%',
   '& .MuiInputBase-input': {
-    padding: theme.spacing(1.5, 6, 1.5, 2), // Vertical padding + font size from searchIcon
+    padding: theme.spacing(1.5, 7, 1.5, 2),
     transition: theme.transitions.create('width'),
     width: '100%',
-    color: 'black'
+    fontSize: '0.95rem',
+    '&::placeholder': {
+      opacity: 0.7,
+    },
+  },
+}));
+
+// Styled Menu Icon Button
+const StyledIconButton = styled(IconButton)(({ theme }) => ({
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'scale(1.1)',
+    backgroundColor: alpha(theme.palette.primary.main, 0.1),
   },
 }));
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { cartItems } = useCart();
   const { user, isAuthenticated, logout } = useAuth();
   const { products } = useProducts();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
-  const [anchorElUser, setAnchorElUser] = React.useState(null);
-  const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
+  const [anchorElUser, setAnchorElUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [notifications, setNotifications] = useState([]);
   const [anchorElNotif, setAnchorElNotif] = useState(null);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
       loadNotifications();
-
       const socket = io(API_BASE_URL);
       socket.on('newNotification', ({ userId, notification }) => {
         if (userId === user?._id) {
           setNotifications(prev => [notification, ...prev]);
         }
       });
-
       return () => socket.disconnect();
     }
   }, [isAuthenticated, user?._id]);
@@ -132,6 +151,14 @@ const Navbar = () => {
     }
   };
 
+  const handleProfileMenuOpen = (event) => {
+    setAnchorElUser(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorElUser(null);
+  };
+
   const handleNotifOpen = (event) => {
     setAnchorElNotif(event.currentTarget);
   };
@@ -140,101 +167,117 @@ const Navbar = () => {
     setAnchorElNotif(null);
   };
 
-  const handleProfileMenuOpen = (event) => {
-    setAnchorElUser(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorElUser(null);
-    setMobileMoreAnchorEl(null);
-  };
-
   const handleSearch = (e) => {
-      e.preventDefault();
-      if(searchQuery.trim()) {
-          navigate(`/products?search=${searchQuery}`);
-      }
-  }
-  
+    e?.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?keyword=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
   const handleLogout = () => {
-      logout();
-      handleMenuClose();
-      navigate('/login');
-  }
+    logout();
+    handleMenuClose();
+    navigate('/login');
+  };
 
   const categories = [...new Set(products.map(p => (p.category || 'Uncategorized').trim()))]
     .filter(Boolean)
     .sort()
     .slice(0, 6);
 
-  const menuId = 'primary-search-account-menu';
-  const renderMenu = (
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  // User Menu
+  const renderUserMenu = (
     <Menu
       anchorEl={anchorElUser}
-      anchorOrigin={{
-        vertical: 'top',
-        horizontal: 'right',
-      }}
-      id={menuId}
-      keepMounted
-      transformOrigin={{
-        vertical: 'top',
-        horizontal: 'right',
-      }}
       open={Boolean(anchorElUser)}
       onClose={handleMenuClose}
+      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      PaperProps={{
+        sx: {
+          mt: 1.5,
+          borderRadius: 2,
+          minWidth: 200,
+          boxShadow: theme.palette.mode === 'light'
+            ? '0 8px 32px rgba(0, 0, 0, 0.12)'
+            : '0 8px 32px rgba(0, 0, 0, 0.5)',
+        }
+      }}
     >
       {!isAuthenticated ? (
-          <div>
-            <MenuItem onClick={() => { handleMenuClose(); navigate('/login'); }}>Login</MenuItem>
-            <MenuItem onClick={() => { handleMenuClose(); navigate('/signup'); }}>Sign Up</MenuItem>
-          </div>
+        <div>
+          <MenuItem onClick={() => { handleMenuClose(); navigate('/login'); }}>
+            <Typography>Login</Typography>
+          </MenuItem>
+          <MenuItem onClick={() => { handleMenuClose(); navigate('/signup'); }}>
+            <Typography>Sign Up</Typography>
+          </MenuItem>
+        </div>
       ) : (
-          <div>
-            <MenuItem disabled sx={{ opacity: 1, fontWeight: 'bold', color: 'black' }}>Hello, {user?.name}</MenuItem>
-            <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }}>Your Profile</MenuItem>
-            <MenuItem onClick={() => { handleMenuClose(); navigate('/Yourorders'); }}>Your Orders</MenuItem>
-            <MenuItem onClick={() => { handleMenuClose(); navigate('/support'); }}>Support History</MenuItem>
-            <MenuItem onClick={handleLogout}>Sign Out</MenuItem>
-          </div>
+        <div>
+          <MenuItem disabled sx={{ opacity: 1, fontWeight: 'bold' }}>
+            Hello, {user?.name}
+          </MenuItem>
+          <Divider sx={{ my: 0.5 }} />
+          <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }}>
+            Your Profile
+          </MenuItem>
+          <MenuItem onClick={() => { handleMenuClose(); navigate('/Yourorders'); }}>
+            Your Orders
+          </MenuItem>
+          <MenuItem onClick={() => { handleMenuClose(); navigate('/support'); }}>
+            Support History
+          </MenuItem>
+          <Divider sx={{ my: 0.5 }} />
+          <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+            Sign Out
+          </MenuItem>
+        </div>
       )}
     </Menu>
   );
 
-  const notifId = 'notification-menu';
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
+  // Notifications Menu
   const renderNotifMenu = (
     <Menu
       anchorEl={anchorElNotif}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      id={notifId}
-      keepMounted
-      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       open={Boolean(anchorElNotif)}
       onClose={handleNotifClose}
+      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       PaperProps={{
-        style: { width: 320, maxHeight: 400 }
+        sx: {
+          mt: 1.5,
+          borderRadius: 2,
+          width: 360,
+          maxHeight: 480,
+          boxShadow: theme.palette.mode === 'light'
+            ? '0 8px 32px rgba(0, 0, 0, 0.12)'
+            : '0 8px 32px rgba(0, 0, 0, 0.5)',
+        }
       }}
     >
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="subtitle1" fontWeight="bold">Notifications</Typography>
+        <Typography variant="h6" fontWeight="bold">Notifications</Typography>
         {unreadCount > 0 && (
           <Button size="small" onClick={markAllAsRead}>Mark all read</Button>
         )}
       </Box>
       <Divider />
-      <List sx={{ p: 0 }}>
+      <List sx={{ p: 0, maxHeight: 360, overflow: 'auto' }}>
         {notifications.length > 0 ? (
           notifications.map((n) => (
-            <MenuItem 
-              key={n._id} 
+            <MenuItem
+              key={n._id}
               onClick={() => { navigate(n.link || '/support'); handleNotifClose(); }}
-              sx={{ 
-                bgcolor: n.isRead ? 'transparent' : 'action.hover',
-                borderLeft: n.isRead ? 'none' : '4px solid #febd69',
+              sx={{
+                bgcolor: n.isRead ? 'transparent' : alpha(theme.palette.primary.main, 0.08),
+                borderLeft: n.isRead ? 'none' : `4px solid ${theme.palette.primary.main}`,
                 mb: 0.5,
-                whiteSpace: 'normal'
+                whiteSpace: 'normal',
+                py: 1.5,
               }}
             >
               <ListItemText
@@ -242,36 +285,117 @@ const Navbar = () => {
                 secondary={
                   <React.Fragment>
                     <Typography variant="body2" color="text.primary">{n.message}</Typography>
-                    <Typography variant="caption" color="text.secondary">{new Date(n.date).toLocaleString()}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {new Date(n.date).toLocaleString()}
+                    </Typography>
                   </React.Fragment>
                 }
               />
             </MenuItem>
           ))
         ) : (
-          <Box sx={{ p: 2, textAlign: 'center' }}>
+          <Box sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">No notifications</Typography>
           </Box>
         )}
       </List>
       {notifications.length > 0 && (
-          <Box sx={{ p: 1, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
-            <Button fullWidth size="small" onClick={() => { navigate('/profile'); handleNotifClose(); }}>View All</Button>
-          </Box>
+        <Box sx={{ p: 1, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
+          <Button fullWidth size="small" onClick={() => { navigate('/profile'); handleNotifClose(); }}>
+            View All
+          </Button>
+        </Box>
       )}
     </Menu>
   );
 
+  // Mobile Drawer
+  const renderMobileDrawer = (
+    <Drawer
+      anchor="left"
+      open={mobileDrawerOpen}
+      onClose={() => setMobileDrawerOpen(false)}
+      PaperProps={{
+        sx: {
+          width: 280,
+          backgroundColor: theme.palette.background.paper,
+          backgroundImage: 'none',
+        }
+      }}
+    >
+      <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6" fontWeight="bold">Menu</Typography>
+        <IconButton onClick={() => setMobileDrawerOpen(false)}>
+          <Close />
+        </IconButton>
+      </Box>
+      <Divider />
+      <List sx={{ p: 2 }}>
+        <MenuItem onClick={() => { navigate('/'); setMobileDrawerOpen(false); }}>
+          Home
+        </MenuItem>
+        <MenuItem onClick={() => { navigate('/products'); setMobileDrawerOpen(false); }}>
+          All Products
+        </MenuItem>
+        {categories.map((cat) => (
+          <MenuItem
+            key={cat}
+            onClick={() => { navigate(`/products?category=${encodeURIComponent(cat)}`); setMobileDrawerOpen(false); }}
+          >
+            {cat}
+          </MenuItem>
+        ))}
+        <Divider sx={{ my: 1 }} />
+        {isAuthenticated ? (
+          <>
+            <MenuItem onClick={() => { navigate('/profile'); setMobileDrawerOpen(false); }}>
+              Profile
+            </MenuItem>
+            <MenuItem onClick={() => { navigate('/Yourorders'); setMobileDrawerOpen(false); }}>
+              Orders
+            </MenuItem>
+            <MenuItem onClick={() => { navigate('/support'); setMobileDrawerOpen(false); }}>
+              Support
+            </MenuItem>
+            <MenuItem onClick={() => { handleLogout(); setMobileDrawerOpen(false); }} sx={{ color: 'error.main' }}>
+              Logout
+            </MenuItem>
+          </>
+        ) : (
+          <>
+            <MenuItem onClick={() => { navigate('/login'); setMobileDrawerOpen(false); }}>
+              Login
+            </MenuItem>
+            <MenuItem onClick={() => { navigate('/signup'); setMobileDrawerOpen(false); }}>
+              Sign Up
+            </MenuItem>
+          </>
+        )}
+      </List>
+    </Drawer>
+  );
+
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
-        <Toolbar sx={{ minHeight: '60px !important' }}>
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          backdropFilter: 'blur(20px)',
+          backgroundColor: theme.palette.mode === 'light'
+            ? alpha(theme.palette.background.paper, 0.8)
+            : alpha(theme.palette.background.default, 0.9),
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <Toolbar sx={{ minHeight: { xs: 64, md: 70 }, px: { xs: 2, md: 3 } }}>
           {/* Mobile Menu Icon */}
           <IconButton
-            size="large"
             edge="start"
             color="inherit"
-            aria-label="open drawer"
+            aria-label="menu"
+            onClick={() => setMobileDrawerOpen(true)}
             sx={{ mr: 2, display: { xs: 'flex', md: 'none' } }}
           >
             <MenuIcon />
@@ -279,99 +403,144 @@ const Navbar = () => {
 
           {/* Logo */}
           <Typography
-            variant="h6"
+            variant="h5"
             noWrap
             component="div"
             onClick={() => navigate('/')}
-            sx={{ display: { xs: 'none', sm: 'block' }, cursor: 'pointer', fontFamily: 'Arial', fontWeight: 'bold' }}
+            sx={{
+              display: { xs: 'none', sm: 'block' },
+              cursor: 'pointer',
+              fontFamily: 'Poppins',
+              fontWeight: 800,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.5px',
+              transition: 'transform 0.3s ease',
+              '&:hover': {
+                transform: 'scale(1.05)',
+              },
+            }}
           >
             V-CART
           </Typography>
 
-          {/* Location (Visual Only) */}
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', mx: 2, cursor: 'pointer' }}>
-             <Typography variant="caption" sx={{ color: '#ccc', lineHeight: 1 }}>Deliver to</Typography>
-             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                 <LocationOn sx={{ fontSize: 16 }} />
-                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>India</Typography>
-             </Box>
-          </Box>
-
           {/* Search Bar */}
           <Search>
             <StyledInputBase
-              placeholder="Search V-Cart..."
+              placeholder="Search for products..."
               inputProps={{ 'aria-label': 'search' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
             />
-             <Box sx={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 50, bgcolor: 'secondary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 4px 4px 0', cursor: 'pointer' }} onClick={handleSearch}>
-                <SearchIcon sx={{ color: 'white' }} />
-             </Box>
+            <SearchIconWrapper onClick={handleSearch}>
+              <SearchIcon />
+            </SearchIconWrapper>
           </Search>
 
           <Box sx={{ flexGrow: 1 }} />
 
           {/* Desktop Icons */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box 
-                onClick={handleProfileMenuOpen}
-                sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', cursor: 'pointer', '&:hover': { opacity: 0.8 }, p: 1, color: 'white' }}
-            >
-                 <Typography variant="caption" sx={{ lineHeight: 1, color: 'grey.300' }}>Hello, {isAuthenticated ? user?.name : 'Sign in'}</Typography>
-                 <Typography variant="body2" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-                    Account & Lists <ArrowDropDown fontSize="small" />
-                 </Typography>
-            </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
-            <Box 
-                onClick={() => navigate(isAuthenticated ? '/Yourorders' : '/login')}
-                sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', cursor: 'pointer', '&:hover': { opacity: 0.8 }, p: 1, color: 'white' }}
-            >
-                 <Typography variant="caption" sx={{ lineHeight: 1, color: 'grey.300' }}>Returns</Typography>
-                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>& Orders</Typography>
-            </Box>
-
+            {/* Wishlist */}
             {isAuthenticated && (
-              <IconButton color="inherit" onClick={handleNotifOpen}>
-                <Badge badgeContent={unreadCount} color="error">
-                  <Notifications />
-                </Badge>
-              </IconButton>
+              <Tooltip title="Wishlist">
+                <StyledIconButton color="inherit" onClick={() => navigate('/profile?tab=wishlist')}>
+                  <FavoriteBorder />
+                </StyledIconButton>
+              </Tooltip>
             )}
 
-            <IconButton
-              size="large"
-              aria-label="show cart items"
-              color="inherit"
-              onClick={() => navigate('/cart')}
-            >
-              <Badge badgeContent={cartItems?.length || 0} color="secondary">
-                <ShoppingCartIcon fontSize="large" sx={{ color: 'white' }} />
-              </Badge>
-              <Typography variant="caption" sx={{ mt: 2, fontWeight: 'bold', display: { xs: 'none', md: 'block' } }}>Cart</Typography>
-            </IconButton>
+            {/* Notifications */}
+            {isAuthenticated && (
+              <Tooltip title="Notifications">
+                <StyledIconButton color="inherit" onClick={handleNotifOpen}>
+                  <Badge badgeContent={unreadCount} color="error">
+                    <Notifications />
+                  </Badge>
+                </StyledIconButton>
+              </Tooltip>
+            )}
+
+            {/* Cart */}
+            <Tooltip title="Cart">
+              <StyledIconButton color="inherit" onClick={() => navigate('/cart')}>
+                <Badge badgeContent={cartItems?.length || 0} color="secondary">
+                  <ShoppingCartIcon />
+                </Badge>
+              </StyledIconButton>
+            </Tooltip>
+
+            {/* User Account */}
+            <Tooltip title="Account">
+              <StyledIconButton color="inherit" onClick={handleProfileMenuOpen}>
+                <Person />
+              </StyledIconButton>
+            </Tooltip>
           </Box>
         </Toolbar>
-        
-        {/* Secondary Navbar (Categories) */}
-        <Box sx={{ bgcolor: 'primary.light', color: 'white', px: 2, py: 1, display: 'flex', gap: 2, overflowX: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            <Button startIcon={<MenuIcon />} sx={{ color: 'white', textTransform: 'none', fontWeight: 'bold' }}>All</Button>
-            {categories.map((cat) => (
-                <Button 
-                    key={cat} 
-                    sx={{ color: 'white', textTransform: 'none', whiteSpace: 'nowrap' }} 
-                    onClick={() => navigate(`/products?keyword=${encodeURIComponent(cat)}`)}
-                >
-                    {cat}
-                </Button>
-            ))}
-            <Button sx={{ color: 'white', textTransform: 'none', whiteSpace: 'nowrap' }} onClick={() => navigate('/products')}>See All Deals</Button>
+
+        {/* Category Bar - Desktop Only */}
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'flex' },
+            gap: 1,
+            px: 3,
+            py: 1,
+            overflowX: 'auto',
+            borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            '&::-webkit-scrollbar': { height: 4 },
+            '&::-webkit-scrollbar-thumb': {
+              background: theme.palette.primary.main,
+              borderRadius: 2,
+            },
+          }}
+        >
+          <Button
+            size="small"
+            onClick={() => navigate('/products')}
+            sx={{
+              color: 'text.primary',
+              textTransform: 'none',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                color: 'primary.main',
+              },
+            }}
+          >
+            All Products
+          </Button>
+          {categories.map((cat) => (
+            <Button
+              key={cat}
+              size="small"
+              onClick={() => navigate(`/products?category=${encodeURIComponent(cat)}`)}
+              sx={{
+                color: 'text.primary',
+                textTransform: 'none',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  color: 'primary.main',
+                },
+              }}
+            >
+              {cat}
+            </Button>
+          ))}
         </Box>
       </AppBar>
-      {renderMenu}
+
+      {renderUserMenu}
       {renderNotifMenu}
+      {renderMobileDrawer}
       <CreateTicket open={ticketDialogOpen} onClose={() => setTicketDialogOpen(false)} />
     </Box>
   );

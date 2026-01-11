@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Container, Paper, TextField, Button, Typography, Box, Alert, CircularProgress } from '@mui/material';
+import { Container, Paper, TextField, Button, Typography, Box, CircularProgress } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
+import toast from '../../utils/toast';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -12,7 +13,6 @@ const Signup = () => {
     password: '',
     confirmPassword: ''
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -26,14 +26,13 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      return setError('Passwords do not match');
+      return toast.error('Passwords do not match');
     }
 
     if (formData.password.length < 6) {
-      return setError('Password must be at least 6 characters');
+      return toast.error('Password must be at least 6 characters');
     }
 
     setLoading(true);
@@ -47,11 +46,13 @@ const Signup = () => {
       
       const { user, token } = response.data;
       login(user, token);
+      toast.success(`Welcome, ${user.name}! Your account has been created.`);
       
       navigate('/');
     } catch (err) {
       console.error('Signup error:', err);
-      setError(err.response?.data?.message || 'Failed to sign up. Please try again.');
+      const errorMsg = err.response?.data?.message || 'Failed to sign up. Please try again.';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -84,12 +85,6 @@ const Signup = () => {
              <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
               Join our exclusive tailoring community
             </Typography>
-
-            {error && (
-              <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-                {error}
-              </Alert>
-            )}
 
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
               <TextField

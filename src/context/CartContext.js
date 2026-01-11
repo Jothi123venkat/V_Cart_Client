@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from 'axios';
-import Swal from "sweetalert2";
+import toast from '../utils/toast';
 import API_BASE_URL, { API_ENDPOINTS } from "../config/api";
 import { useAuth } from "./AuthContext";
 
@@ -42,11 +42,7 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = async (product) => {
     if(!user) {
-        Swal.fire({
-            title: "Please Login",
-            text: "You need to be logged in to add items to cart",
-            icon: "info"
-        });
+        toast.info("Please login to add items to cart");
         return;
     }
 
@@ -57,17 +53,10 @@ export const CartProvider = ({ children }) => {
         );
         
         setCartItems(res.data); // Server returns updated list
-        
-        Swal.fire({
-            title: "Added!",
-            text: `${product.productname} added to cart.`,
-            icon: "success",
-            timer: 1500,
-            showConfirmButton: false
-        });
+        toast.success(`${product.productname} added to cart!`);
     } catch (err) {
         console.error("Add cart error", err);
-        Swal.fire("Error", "Failed to add to cart", "error");
+        toast.error("Failed to add to cart");
     }
   };
 
@@ -133,10 +122,10 @@ export const CartProvider = ({ children }) => {
       // Clear cart after success
       await clearCart();
       
-      Swal.fire("Order Placed!", "Your order has been recorded.", "success");
+      toast.success("Order placed successfully!");
     } catch (error) {
       console.error(error);
-      Swal.fire("Error", error.response?.data?.msg || "Failed to place order.", "error");
+      toast.error(error.response?.data?.msg || "Failed to place order");
     } finally {
       setLoading(false);
     }

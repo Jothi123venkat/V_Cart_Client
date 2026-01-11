@@ -18,7 +18,9 @@ import {
   Button,
   Divider,
   CircularProgress,
-  Stack
+  Stack,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   TrendingUp,
@@ -61,6 +63,7 @@ const AdminDashboard = () => {
     products: [],
     tickets: []
   });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -71,7 +74,7 @@ const AdminDashboard = () => {
       const [ordersRes, usersRes, productsRes, ticketsRes] = await Promise.all([
         axios.get(`${API_BASE_URL}${API_ENDPOINTS.orders.all}`, { headers }),
         axios.get(`${API_BASE_URL}${API_ENDPOINTS.admin.users}`, { headers }),
-        axios.get(`${API_BASE_URL}${API_ENDPOINTS.products.all}`), // All products might be public
+        axios.get(`${API_BASE_URL}${API_ENDPOINTS.products.getAll}`), // All products might be public
         axios.get(`${API_BASE_URL}${API_ENDPOINTS.tickets.admin}`, { headers })
       ]);
 
@@ -81,12 +84,16 @@ const AdminDashboard = () => {
         products: productsRes.data,
         tickets: ticketsRes.data
       });
+      setSnackbar({ open: true, message: 'Data synchronized successfully!', severity: 'success' });
     } catch (error) {
       console.error('Failed to load dashboard data', error);
+      setSnackbar({ open: true, message: 'Failed to sync data. Please try again.', severity: 'error' });
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleCloseSnackbar = () => setSnackbar(prev => ({ ...prev, open: false }));
 
   useEffect(() => {
     fetchData();
@@ -132,10 +139,10 @@ const AdminDashboard = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
   const statCards = [
-    { title: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: <AttachMoney />, color: '#2e7d32', trend: '+12.5%' },
-    { title: 'Total Orders', value: data.orders.length, icon: <ShoppingCart />, color: '#1976d2', trend: `${stats.processingOrders} pending` },
-    { title: 'Active Users', value: data.users.length, icon: <People />, color: '#9c27b0', trend: 'In directory' },
-    { title: 'Support Tickets', value: data.tickets.length, icon: <SupportAgent />, color: '#ed6c02', trend: `${stats.pendingTickets} urgent` },
+    { title: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: <AttachMoney />, color: '#2e7d32', trend: '+12.5%', path: '/admin/analytics' },
+    { title: 'Total Orders', value: data.orders.length, icon: <ShoppingCart />, color: '#1976d2', trend: `${stats.processingOrders} pending`, path: '/admin/orders' },
+    { title: 'Active Users', value: data.users.length, icon: <People />, color: '#9c27b0', trend: 'In directory', path: '/admin/users' },
+    { title: 'Support Tickets', value: data.tickets.length, icon: <SupportAgent />, color: '#ed6c02', trend: `${stats.pendingTickets} urgent`, path: '/admin/support' },
   ];
 
   if (loading) {
@@ -164,11 +171,20 @@ const AdminDashboard = () => {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {statCards.map((stat, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card elevation={0} sx={{ 
+            <Card 
+              elevation={0} 
+              onClick={() => navigate(stat.path)}
+              sx={{ 
                 border: '1px solid #e2e8f0', 
                 borderRadius: 4,
-                transition: 'transform 0.2s',
-                '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }
+                cursor: 'pointer',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': { 
+                  transform: 'translateY(-4px)', 
+                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                  borderColor: stat.color,
+                  bgcolor: `${stat.color}05`
+                }
             }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
@@ -348,6 +364,17 @@ const AdminDashboard = () => {
             </Card>
         </Grid>
       </Grid>
+
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={4000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled" sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

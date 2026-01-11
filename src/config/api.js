@@ -24,7 +24,7 @@ export const API_ENDPOINTS = {
   },
   user: {
     profile: '/api/profile',
-    address: '/api/address',
+    address: '/api/profile/addresses',
     wishlist: '/api/wishlist'
   },
   admin: {

@@ -1,29 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Container,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  Grid,
-  Box,
-  CircularProgress,
-  IconButton,
-  Alert,
-  InputAdornment
+  Container, Card, CardContent, TextField, Button, Typography, Grid, Box,
+  CircularProgress, Alert, InputAdornment, Dialog, DialogTitle, DialogContent,
+  DialogActions, Radio, RadioGroup, FormControlLabel, Divider, Chip
 } from '@mui/material';
-import { ShoppingBag, LocalOffer, CheckCircle } from '@mui/icons-material';
+import { ShoppingBag, LocalOffer, CheckCircle, Home, Work, LocationOn, Star, Edit } from '@mui/icons-material';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
+import toast from '../../utils/toast';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { items, isBuyNow } = location.state || { items: [], isBuyNow: false };
 
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -33,41 +28,102 @@ const Checkout = () => {
     zipCode: ''
   });
   const [loading, setLoading] = useState(false);
+  const [fetchingAddresses, setFetchingAddresses] = useState(true);
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponError, setCouponError] = useState('');
 
-  // Normalize items to handle both Cart structure (nested product) and Buy Now structure (flat product)
+  // Normalize items
   const normalizedItems = items.map(item => {
-      // Check if it's a cart item structure (has .product) or direct product
       if (item.product && item.quantity) {
-          return {
-              ...item.product,
-              quantity: item.quantity,
-              _id: item.product._id // Ensure ID is accessible
-          };
+          return { ...item.product, quantity: item.quantity, _id: item.product._id };
       }
-      // Assume it's a direct product (Buy Now)
-      return {
-          ...item,
-          quantity: item.quantity || 1
-      };
+      return { ...item, quantity: item.quantity || 1 };
   });
 
   const subtotal = normalizedItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
   const total = subtotal - discount;
 
-  const handleChange = (e) => {
+  // Fetch saved addresses
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
+
+  const fetchAddresses = async () => {
+    try {
+      const token = localStorage.getItem('vcart_token');
+      const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.user.profile}`, {
+        headers: { 'x-auth-token': token }
+      });
+      
+      const userAddresses = res.data.addresses || [];
+      setSavedAddresses(userAddresses);
+      
+      // Auto-select default address
+      const defaultAddr = userAddresses.find(addr => addr.isDefault);
+      if (defaultAddr) {
+        setSelectedAddressId(defaultAddr._id);
+        prefillFormWithAddress(defaultAddr, res.data);
+      } else if (userAddresses.length > 0) {
+        // If no default, select first one
+        setSelectedAddressId(userAddresses[0]._id);
+        prefillFormWithAddress(userAddresses[0], res.data);
+      }
+      
+      setFetchingAddresses(false);
+    } catch (err) {
+      console.error('Fetch addresses error:', err);
+      setFetchingAddresses(false);
+    }
+  };
+
+  const prefillFormWithAddress = (addr, userData) => {
     setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
+      name: userData?.name || '',
+      email: userData?.email || '',
+      phone: userData?.phone || '',
+      address: addr.street || '',
+      city: addr.city || '',
+      zipCode: addr.zip || ''
     });
+  };
+
+  const handleAddressChange = (addressId) => {
+    setSelectedAddressId(addressId);
+    const addr = savedAddresses.find(a => a._id === addressId);
+    if (addr) {
+      // Update form with selected address
+      setFormData(prev => ({
+        ...prev,
+        address: addr.street || '',
+        city: addr.city || '',
+        zipCode: addr.zip || ''
+      }));
+    }
+    setAddressDialogOpen(false);
+  };
+
+  const getSelectedAddress = () => {
+    return savedAddresses.find(addr => addr._id === selectedAddressId);
+  };
+
+  const getAddressIcon = (label) => {
+    switch(label?.toLowerCase()) {
+      case 'home': return <Home color="primary" fontSize="small" />;
+      case 'office':
+      case 'work': return <Work color="secondary" fontSize="small" />;
+      default: return <LocationOn color="action" fontSize="small" />;
+    }
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleApplyCoupon = async () => {
     if (!couponCode) {
-        setCouponError('Please enter a coupon code');
-        return;
+      setCouponError('Please enter a coupon code');
+      return;
     }
 
     setCouponError('');
@@ -81,7 +137,6 @@ const Checkout = () => {
       
       const { discount: discountVal, type, message } = res.data;
       
-      // Calculate discount
       let discountAmount = 0;
       if (type === 'Percentage') {
         discountAmount = (subtotal * discountVal) / 100;
@@ -90,13 +145,7 @@ const Checkout = () => {
       }
       
       setDiscount(discountAmount);
-      Swal.fire({
-        title: 'Coupon Applied!',
-        text: message,
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      });
+      toast.success(message || 'Coupon applied successfully!');
     } catch (err) {
       setDiscount(0);
       setCouponError(err.response?.data?.message || 'Invalid coupon code');
@@ -108,53 +157,42 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation
     if (!formData.name || !formData.phone || !formData.address) {
-      Swal.fire('Error', 'Please fill in all required fields', 'error');
+      toast.error('Please fill in all required fields');
       return;
     }
 
     setLoading(true);
     try {
       const orderData = {
-          items: normalizedItems.map(i => ({
-              productname: i.productname,
-              price: i.price,
-              ImageURL: i.ImageURL,
-              productId: i._id,
-              quantity: i.quantity 
-          })),
-          total: total,
-          shippingInfo: {
-              name: formData.name,
-              email: formData.email,
-              phone: formData.phone,
-              address: formData.address,
-              city: formData.city,
-              zipCode: formData.zipCode
-          }
+        items: normalizedItems.map(i => ({
+          productname: i.productname,
+          price: i.price,
+          ImageURL: i.ImageURL,
+          productId: i._id,
+          quantity: i.quantity 
+        })),
+        total: total,
+        shippingInfo: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          zipCode: formData.zipCode
+        }
       };
 
       const token = localStorage.getItem('vcart_token');
       await axios.post(`${API_BASE_URL}${API_ENDPOINTS.orders.place}`, orderData, {
-          headers: { 'x-auth-token': token }
+        headers: { 'x-auth-token': token }
       });
       
-      Swal.fire({
-        title: 'Order Placed Successfully!',
-        html: `
-          <p>Thank you, <strong>${formData.name}</strong>!</p>
-          <p>Your order of <strong>₹${total}</strong> has been confirmed.</p>
-          <p>We'll deliver to: ${formData.address}, ${formData.city}</p>
-        `,
-        icon: 'success',
-        confirmButtonText: 'View Orders'
-      }).then(() => {
-        navigate('/Yourorders');
-      });
+      toast.success('Order placed successfully!');
+      setTimeout(() => navigate('/Yourorders'), 1500);
     } catch (error) {
       console.error('Checkout error:', error);
-      Swal.fire('Error', 'Failed to place order. Please try again.', 'error');
+      toast.error('Failed to place order. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -178,6 +216,56 @@ const Checkout = () => {
       </Typography>
 
       <Grid container spacing={3}>
+        {/* Delivery Address Section */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Delivery Address</Typography>
+                {savedAddresses.length > 0 && (
+                  <Button 
+                    size="small" 
+                    variant="outlined"
+                    onClick={() => setAddressDialogOpen(true)}
+                  >
+                    Change Address
+                  </Button>
+                )}
+              </Box>
+
+              {fetchingAddresses ? (
+                <Box display="flex" justifyContent="center" p={2}>
+                  <CircularProgress />
+                </Box>
+              ) : savedAddresses.length === 0 ? (
+                <Alert severity="info">
+                  No saved addresses. Please fill in your delivery address below.
+                </Alert>
+              ) : (
+                <Card variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
+                  {getSelectedAddress() && (
+                    <Box>
+                      <Box display="flex" alignItems="center" gap={1} mb={1}>
+                        {getAddressIcon(getSelectedAddress().label)}
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          {getSelectedAddress().label}
+                        </Typography>
+                        {getSelectedAddress().isDefault && (
+                          <Chip label="Default" size="small" icon={<Star />} color="primary" />
+                        )}
+                      </Box>
+                      <Typography variant="body2">{getSelectedAddress().street}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {getSelectedAddress().city}, {getSelectedAddress().state} {getSelectedAddress().zip}
+                      </Typography>
+                    </Box>
+                  )}
+                </Card>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
         {/* Order Summary */}
         <Grid item xs={12} md={5}>
           <Card>
@@ -218,11 +306,11 @@ const Checkout = () => {
           </Card>
         </Grid>
 
-        {/* Shipping Form */}
+        {/* Contact & Coupon Form */}
         <Grid item xs={12} md={7}>
           <Card>
             <CardContent>
-              <Typography variant="h6" className="mb-3">Shipping Information</Typography>
+              <Typography variant="h6" className="mb-3">Contact Information</Typography>
               <form onSubmit={handleSubmit}>
                 <TextField
                   fullWidth
@@ -251,6 +339,9 @@ const Checkout = () => {
                   margin="normal"
                   required
                 />
+
+                <Divider sx={{ my: 2 }} />
+
                 <TextField
                   fullWidth
                   label="Address *"
@@ -297,16 +388,16 @@ const Checkout = () => {
                       label="Coupon Code"
                       value={couponCode}
                       onChange={(e) => {
-                          setCouponCode(e.target.value.toUpperCase());
-                          if(discount > 0) setDiscount(0); // Reset if code changes
+                        setCouponCode(e.target.value.toUpperCase());
+                        if(discount > 0) setDiscount(0);
                       }}
                       placeholder="SAVE20"
                       InputProps={{
-                          endAdornment: discount > 0 ? (
-                              <InputAdornment position="end">
-                                  <CheckCircle color="success" />
-                              </InputAdornment>
-                          ) : null
+                        endAdornment: discount > 0 ? (
+                          <InputAdornment position="end">
+                            <CheckCircle color="success" />
+                          </InputAdornment>
+                        ) : null
                       }}
                     />
                     <Button variant="outlined" onClick={handleApplyCoupon} disabled={loading}>
@@ -331,7 +422,7 @@ const Checkout = () => {
                     size="large"
                     disabled={loading}
                   >
-                    {loading ? <CircularProgress size={24} /> : `Place Order - ₹${total}`}
+                    {loading ? <CircularProgress size={24} /> : `Place Order - ₹${total.toFixed(2)}`}
                   </Button>
                 </Box>
               </form>
@@ -339,6 +430,49 @@ const Checkout = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Address Selection Dialog */}
+      <Dialog open={addressDialogOpen} onClose={() => setAddressDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Select Delivery Address</DialogTitle>
+        <DialogContent>
+          <RadioGroup value={selectedAddressId} onChange={(e) => handleAddressChange(e.target.value)}>
+            {savedAddresses.map(addr => (
+              <Card 
+                key={addr._id} 
+                variant="outlined" 
+                sx={{ mb: 2, cursor: 'pointer' }}
+                onClick={() => handleAddressChange(addr._id)}
+              >
+                <CardContent>
+                  <FormControlLabel
+                    value={addr._id}
+                    control={<Radio />}
+                    label={
+                      <Box>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {getAddressIcon(addr.label)}
+                          <Typography fontWeight="bold">{addr.label}</Typography>
+                          {addr.isDefault && <Chip label="Default" size="small" icon={<Star />} color="primary" />}
+                        </Box>
+                        <Typography variant="body2">{addr.street}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {addr.city}, {addr.state} {addr.zip}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </CardContent>
+              </Card>
+            ))}
+          </RadioGroup>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddressDialogOpen(false)}>Cancel</Button>
+          <Button variant="outlined" onClick={() => navigate('/profile')}>
+            Add New Address
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

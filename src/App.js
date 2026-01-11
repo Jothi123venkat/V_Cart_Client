@@ -1,13 +1,13 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { CartProvider } from './context/CartContext';
 import { ProductProvider } from './context/ProductContext';
 import { AdminProvider } from './context/AdminContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './Components/Auth/Login';
 import Signup from './Components/Auth/Signup';
 import ProtectedUserRoute from './Components/Auth/ProtectedUserRoute';
 import Home from './Components/Main/Home'
-import { Route, Routes, Outlet } from 'react-router-dom'
+import { Route, Routes, Outlet, useNavigate } from 'react-router-dom'
 import Navbar from './Components/NavBar/Navbar'
 import Products from './Components/Productpage/Products'
 import ProductDetails from './Components/Productpage/ProductDetails'
@@ -32,7 +32,10 @@ import Footer from './Components/Footer/Footer';
 
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import theme from './theme';
+import { ThemeContextProvider, useThemeMode } from './context/ThemeContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import setupAxiosInterceptors from './utils/axiosInterceptors';
 
 const PublicLayout = () => (
   <>
@@ -42,89 +45,125 @@ const PublicLayout = () => (
   </>
 );
 
+// Wrapper component to access auth context and setup interceptors
+const AppContent = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const { theme } = useThemeMode();
+
+  useEffect(() => {
+    // Setup axios interceptors for automatic logout on token expiry
+    setupAxiosInterceptors(logout, navigate);
+  }, [logout, navigate]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: theme.palette.background.default }}>
+      <Routes>
+        {/* Public Routes with Navbar/Footer */}
+        <Route element={<PublicLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/search" element={<Products/>} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/product/:id" element={<ProductDetails />} />
+          
+          {/* Protected User Routes (Still use Public Layout) */}
+          <Route path="/Yourorders" element={
+            <ProtectedUserRoute>
+              <Orders />
+            </ProtectedUserRoute>
+          } />
+          <Route path="/cart" element={
+            <ProtectedUserRoute>
+              <Cart />
+            </ProtectedUserRoute>
+          } />
+          <Route path="/checkout" element={
+            <ProtectedUserRoute>
+              <Checkout />
+            </ProtectedUserRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedUserRoute>
+              <UserProfile />
+            </ProtectedUserRoute>
+          } />
+          <Route path="/support" element={
+            <ProtectedUserRoute>
+              <SupportPage />
+            </ProtectedUserRoute>
+          } />
+        </Route>
+        
+        {/* Admin Routes (No Navbar/Footer) */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={
+          <ProtectedAdminRoute>
+            <AdminLayout />
+          </ProtectedAdminRoute>
+        }>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="products" element={<ProductManagement />} />
+          <Route path="categories" element={<CategoryManagement />} />
+          <Route path="orders" element={<OrderManagement />} />
+          <Route path="promotions" element={<PromotionManagement />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="support" element={<AdminTickets />} />
+          <Route path="inventory" element={<InventoryManagement />} />
+        </Route>
+
+        {/* Fallback for AddProduct standalone if needed or move to admin */}
+         <Route path="/addproduct" element={
+            <ProtectedAdminRoute>
+                <ProductManagement />
+            </ProtectedAdminRoute>
+         } />
+      </Routes>
+    </div>
+  );
+};
+
 const App = () => {
 
   return (
-    <ThemeProvider theme={theme}>
-    <CssBaseline />
-    <AuthProvider>
-      <AdminProvider>
-        <ProductProvider>
-        <CartProvider>
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: theme.palette.background.default }}>
-          
-          <Routes>
-            {/* Public Routes with Navbar/Footer */}
-            <Route element={<PublicLayout />}>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/" element={<Home />} />
-              <Route path="/search" element={<Products/>} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/product/:id" element={<ProductDetails />} />
-              
-              {/* Protected User Routes (Still use Public Layout) */}
-              <Route path="/Yourorders" element={
-                <ProtectedUserRoute>
-                  <Orders />
-                </ProtectedUserRoute>
-              } />
-              <Route path="/cart" element={
-                <ProtectedUserRoute>
-                  <Cart />
-                </ProtectedUserRoute>
-              } />
-              <Route path="/checkout" element={
-                <ProtectedUserRoute>
-                  <Checkout />
-                </ProtectedUserRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedUserRoute>
-                  <UserProfile />
-                </ProtectedUserRoute>
-              } />
-              <Route path="/support" element={
-                <ProtectedUserRoute>
-                  <SupportPage />
-                </ProtectedUserRoute>
-              } />
-            </Route>
-            
-            {/* Admin Routes (No Navbar/Footer) */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={
-              <ProtectedAdminRoute>
-                <AdminLayout />
-              </ProtectedAdminRoute>
-            }>
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="products" element={<ProductManagement />} />
-              <Route path="categories" element={<CategoryManagement />} />
-              <Route path="orders" element={<OrderManagement />} />
-              <Route path="promotions" element={<PromotionManagement />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="support" element={<AdminTickets />} />
-              <Route path="inventory" element={<InventoryManagement />} />
-            </Route>
-
-            {/* Fallback for AddProduct standalone if needed or move to admin */}
-             <Route path="/addproduct" element={
-                <ProtectedAdminRoute>
-                    <ProductManagement />
-                </ProtectedAdminRoute>
-             } />
-
-          </Routes>
-          
-        </div>
-        </CartProvider>
-      </ProductProvider>
-    </AdminProvider>
-    </AuthProvider>
-    </ThemeProvider>
+    <ThemeContextProvider>
+      <ThemeProviderWrapper />
+    </ThemeContextProvider>
   )
 }
+
+// Separate component to access theme from context
+const ThemeProviderWrapper = () => {
+  const { theme } = useThemeMode();
+  
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <AdminProvider>
+          <ProductProvider>
+            <CartProvider>
+              <AppContent />
+            </CartProvider>
+          </ProductProvider>
+        </AdminProvider>
+      </AuthProvider>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+    </ThemeProvider>
+  );
+};
 
 export default App
