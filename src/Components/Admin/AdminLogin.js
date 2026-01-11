@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 import {
   Container,
   Card,
@@ -15,6 +16,7 @@ import { useAdmin } from '../../context/AdminContext';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { adminLogin } = useAdmin();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -36,18 +38,18 @@ const AdminLogin = () => {
   };
 
   return (
-    <Container maxWidth="sm" className="mt-5">
-      <Card elevation={3}>
-        <CardContent className="p-5">
-          <Box className="text-center mb-4">
-            <AdminPanelSettings sx={{ fontSize: 60, color: '#1976d2' }} />
-            <Typography variant="h4" className="mt-2">Admin Login</Typography>
+    <Container maxWidth="sm" sx={{ mt: 5 }}>
+      <Card elevation={3} sx={{ bgcolor: theme.palette.background.paper }}>
+        <CardContent sx={{ p: 5 }}>
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <AdminPanelSettings sx={{ fontSize: 60, color: theme.palette.primary.main }} />
+            <Typography variant="h4" sx={{ mt: 2, color: theme.palette.text.primary }}>Admin Login</Typography>
             <Typography variant="body2" color="text.secondary">
               Access the admin dashboard
             </Typography>
           </Box>
 
-          {error && <Alert severity="error" className="mb-3">{error}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
           <form onSubmit={handleSubmit}>
             <TextField
@@ -77,14 +79,14 @@ const AdminLogin = () => {
               fullWidth
               variant="contained"
               size="large"
-              className="mt-4"
+              sx={{ mt: 4 }}
               startIcon={<Lock />}
             >
               Login to Admin Panel
             </Button>
           </form>
 
-          <Box className="mt-3 text-center">
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary">
               Admin access only
             </Typography>
@@ -94,5 +96,6 @@ const AdminLogin = () => {
     </Container>
   );
 };
+
 
 export default AdminLogin;

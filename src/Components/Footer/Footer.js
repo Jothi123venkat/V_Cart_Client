@@ -2,11 +2,13 @@ import React from 'react';
 import { Box, Container, Grid, Typography, Link, IconButton, Divider, TextField, Button, useTheme, alpha } from '@mui/material';
 import { Facebook, Twitter, Instagram, LinkedIn, Send, Email, Phone, LocationOn } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useSiteConfig } from '../../context/SiteConfigContext';
 
 const Footer = () => {
     const theme = useTheme();
     const navigate = useNavigate();
     const isLight = theme.palette.mode === 'light';
+    const { siteConfig } = useSiteConfig();
 
     return (
         <Box 
@@ -38,19 +40,23 @@ const Footer = () => {
                 <Grid container spacing={4}>
                     {/* Brand Section */}
                     <Grid item xs={12} md={4}>
-                        <Typography 
-                            variant="h4" 
-                            sx={{ 
-                                fontFamily: 'Poppins',
-                                fontWeight: 800,
-                                mb: 2,
-                                background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.light} 100%)`,
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                            }}
-                        >
-                            V-CART
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                             {siteConfig?.logoUrl && (
+                                <Box component="img" src={siteConfig.logoUrl} sx={{ height: 32, mr: 1.5 }} />
+                             )}
+                            <Typography 
+                                variant="h4" 
+                                sx={{ 
+                                    fontFamily: 'Poppins',
+                                    fontWeight: 800,
+                                    background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.light} 100%)`,
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                }}
+                            >
+                                {siteConfig?.brandName || 'V-CART'}
+                            </Typography>
+                        </Box>
                         <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 3, lineHeight: 1.7 }}>
                             Your one-stop destination for premium products. Experience quality, style, and convenience all in one place.
                         </Typography>
@@ -60,13 +66,13 @@ const Footer = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Email sx={{ fontSize: 18, color: theme.palette.primary.light }} />
                                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                                    support@vcart.com
+                                    {siteConfig?.contactEmail || 'support@vcart.com'}
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Phone sx={{ fontSize: 18, color: theme.palette.primary.light }} />
                                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                                    +91 1234567890
+                                    {siteConfig?.contactPhone || '+91 1234567890'}
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -239,7 +245,7 @@ const Footer = () => {
                     }}
                 >
                     <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                        © {new Date().getFullYear()} V-CART. All rights reserved.
+                        {siteConfig?.footerText || `© ${new Date().getFullYear()} V-CART. All rights reserved.`}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 3 }}>
                         <Link

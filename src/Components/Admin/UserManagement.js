@@ -1,145 +1,150 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, Card, CardContent, Typography, Table, TableBody, TableCell, 
-  TableContainer, TableHead, TableRow, Paper, Chip, Avatar, TextField, 
-  InputAdornment, IconButton, Tooltip, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Select, MenuItem, InputLabel, FormControl,
-  Stack
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTheme } from '@mui/material/styles';
+import {
+  Box,
+  Typography,
+  Button,
+  Stack,
+  Card,
+  CardContent,
+  TextField,
+  InputAdornment,
+  TableContainer,
+  Paper,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Avatar,
+  Chip,
+  Tooltip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
-import { 
-  Search, Person, Visibility, Block, CheckCircle, Add, 
-  Edit, Delete, AdminPanelSettings, Badge
+import {
+  Add,
+  Search,
+  AdminPanelSettings,
+  Person,
+  Block,
+  CheckCircle,
+  Visibility,
+  Edit,
+  Delete
 } from '@mui/icons-material';
 import axios from 'axios';
-import io from 'socket.io-client';
-import Swal from 'sweetalert2';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
+import Swal from 'sweetalert2';
 import UserDetailView from './UserDetailView';
 import UserEditDialog from './UserEditDialog';
 
 const UserManagement = () => {
+  const theme = useTheme();
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUser, setSelectedUser] = useState(null);
+  
+  // Dialog States
   const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  
   const [editOpen, setEditOpen] = useState(false);
+  
   const [openAddDialog, setOpenAddDialog] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user'
+  });
 
   useEffect(() => {
     fetchUsers();
-
-    const socket = io(API_BASE_URL);
-
-    socket.on('newUser', (user) => {
-      setUsers(prev => [user, ...prev]);
-    });
-
-    socket.on('userUpdated', (updatedUser) => {
-      setUsers(prev => prev.map(u => u._id === updatedUser._id ? updatedUser : u));
-    });
-
-    socket.on('userDeleted', (userId) => {
-      setUsers(prev => prev.filter(u => u._id !== userId));
-    });
-
-    return () => socket.disconnect();
   }, []);
 
   const fetchUsers = async () => {
-      try {
-        const token = localStorage.getItem('vcart_token');
-        const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.admin.users}`, {
-            headers: { 'x-auth-token': token }
-        });
-        setUsers(res.data);
-      } catch (err) {
-          console.error("Failed to fetch users", err);
-      }
+    try {
+      const token = localStorage.getItem('vcart_token');
+      const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.admin.users}`, {
+        headers: { 'x-auth-token': token }
+      });
+      setUsers(res.data);
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    }
   };
 
   const handleCreateUser = async () => {
-      if(!newUser.name || !newUser.email || !newUser.password) {
+      if (!newUser.name || !newUser.email || !newUser.password) {
           Swal.fire('Error', 'Please fill all required fields', 'error');
           return;
       }
+
       try {
           const token = localStorage.getItem('vcart_token');
-          await axios.post(`${API_BASE_URL}${API_ENDPOINTS.admin.users}`, newUser, {
-              headers: { 'x-auth-token': token }
+          await axios.post(`${API_BASE_URL}${API_ENDPOINTS.auth.signup}`, newUser, { // Assuming admin creates via signup or specific admin create endpoint
+               headers: { 'x-auth-token': token }
           });
-          
+          Swal.fire('Success', 'User created successfully', 'success');
           setOpenAddDialog(false);
           setNewUser({ name: '', email: '', password: '', role: 'user' });
-          Swal.fire({
-            title: 'Created!',
-            text: 'User has been created successfully',
-            icon: 'success',
-            timer: 2000
-          });
-      } catch (err) {
-          Swal.fire('Error', err.response?.data?.message || 'Failed to create user', 'error');
+          fetchUsers();
+      } catch(err) {
+          Swal.fire('Error', err.response?.data?.msg || 'Failed to create user', 'error');
       }
   };
 
-  const handleUpdateUser = async (userId, updates) => {
+  const handlestatusChange = async (userId, newStatus) => {
       try {
           const token = localStorage.getItem('vcart_token');
-          await axios.put(`${API_BASE_URL}${API_ENDPOINTS.admin.users}/${userId}`, updates, {
-              headers: { 'x-auth-token': token }
-          });
-          
-          setEditOpen(false);
-          setSelectedUser(null);
-          Swal.fire({
-            title: 'Updated!',
-            text: 'User profile updated successfully',
-            icon: 'success',
-            timer: 2000
-          });
-      } catch (err) {
-          Swal.fire('Error', 'Failed to update user', 'error');
+          await axios.put(`${API_BASE_URL}${API_ENDPOINTS.admin.userStatus(userId)}`, 
+            { status: newStatus },
+            { headers: { 'x-auth-token': token } }
+          );
+          Swal.fire('Success', `User ${newStatus === 'active' ? 'activated' : 'suspended'}`, 'success');
+          fetchUsers();
+      } catch(err) {
+           Swal.fire('Error', 'Failed to update user status', 'error');
       }
   };
 
   const handleDeleteUser = async (userId) => {
       const result = await Swal.fire({
-          title: 'Are you sure?',
-          text: "This process cannot be undone!",
+          title: 'Delete User?',
+          text: 'This action cannot be undone.',
           icon: 'warning',
           showCancelButton: true,
           confirmButtonColor: '#d33',
-          cancelButtonColor: '#3085d6',
           confirmButtonText: 'Yes, delete it!'
       });
 
       if (result.isConfirmed) {
           try {
               const token = localStorage.getItem('vcart_token');
+              // Assuming generic delete or specific admin delete
               await axios.delete(`${API_BASE_URL}${API_ENDPOINTS.admin.users}/${userId}`, {
                   headers: { 'x-auth-token': token }
               });
-              Swal.fire('Deleted!', 'User has been removed.', 'success');
-          } catch (err) {
+              Swal.fire('Deleted', 'User removed', 'success');
+              fetchUsers();
+          } catch(err) {
               Swal.fire('Error', 'Failed to delete user', 'error');
           }
       }
   };
 
-  const handlestatusChange = async (userId, newStatus) => {
-      try {
-        const token = localStorage.getItem('vcart_token');
-        await axios.put(`${API_BASE_URL}${API_ENDPOINTS.admin.userStatus(userId)}`, { status: newStatus }, {
-            headers: { 'x-auth-token': token }
-        });
-      } catch (err) {
-          Swal.fire('Error', 'Failed to update status', 'error');
-      }
-  };
-
-  const handleEdit = (user) => {
-      setSelectedUser(user);
-      setEditOpen(true);
+  const handleUpdateUser = async (updatedData) => {
+      // Logic handled in UserEditDialog, or called here if passed up
+      // If UserEditDialog handles the API call itself, we just refresh
+      fetchUsers();
+      setEditOpen(false);
   };
 
   const handleView = (user) => {
@@ -147,16 +152,25 @@ const UserManagement = () => {
       setDetailOpen(true);
   };
 
-  const filteredUsers = users.filter(user =>
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleEdit = (user) => {
+      setSelectedUser(user);
+      setEditOpen(true);
+  };
+
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery) return users;
+    const lowerQuery = searchQuery.toLowerCase();
+    return users.filter(user => 
+        user.name.toLowerCase().includes(lowerQuery) || 
+        user.email.toLowerCase().includes(lowerQuery)
+    );
+  }, [users, searchQuery]);
 
   return (
     <Box sx={{ p: 1 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
         <Box>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
+            <Typography variant="h4" fontWeight="bold" gutterBottom color={theme.palette.text.primary}>
                 User Directory
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -174,7 +188,7 @@ const UserManagement = () => {
         </Button>
       </Stack>
 
-      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)' }}>
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: theme.shadows[1], bgcolor: theme.palette.background.paper }}>
         <CardContent sx={{ p: 2 }}>
           <TextField
             fullWidth
@@ -194,10 +208,10 @@ const UserManagement = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden', boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)' }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden', boxShadow: theme.shadows[1], bgcolor: theme.palette.background.paper }}>
         <Table>
           <TableHead>
-            <TableRow sx={{ bgcolor: '#fafafa' }}>
+            <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
               <TableCell><strong>User Profile</strong></TableCell>
               <TableCell><strong>Email Address</strong></TableCell>
               <TableCell><strong>Role</strong></TableCell>
@@ -214,12 +228,12 @@ const UserManagement = () => {
                       {user.role === 'admin' ? <AdminPanelSettings /> : <Person />}
                     </Avatar>
                     <Box>
-                        <Typography variant="subtitle2" fontWeight="bold">{user.name}</Typography>
+                        <Typography variant="subtitle2" fontWeight="bold" color={theme.palette.text.primary}>{user.name}</Typography>
                         <Typography variant="caption" color="text.secondary">Joined {new Date(user.createdAt).toLocaleDateString()}</Typography>
                     </Box>
                   </Box>
                 </TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell sx={{ color: theme.palette.text.primary }}>{user.email}</TableCell>
                 <TableCell>
                     <Chip 
                         label={user.role?.toUpperCase()} 
@@ -295,8 +309,8 @@ const UserManagement = () => {
         onUpdate={handleUpdateUser}
       />
 
-      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} fullWidth maxWidth="xs">
-          <DialogTitle fontWeight="bold">Create New Account</DialogTitle>
+      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} fullWidth maxWidth="xs" PaperProps={{ sx: { bgcolor: theme.palette.background.paper } }}>
+          <DialogTitle fontWeight="bold" color={theme.palette.text.primary}>Create New Account</DialogTitle>
           <DialogContent>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
                   Add a new user to the platform. They will be able to log in immediately with these credentials.

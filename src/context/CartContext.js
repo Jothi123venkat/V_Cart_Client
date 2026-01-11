@@ -46,6 +46,21 @@ export const CartProvider = ({ children }) => {
         return;
     }
 
+    // Check if product has stock
+    if (product.stock !== undefined && product.stock <= 0) {
+        toast.error("This item is out of stock");
+        return;
+    }
+
+    // Check if adding would exceed stock (optional, if we have local cart state)
+    const existingItem = cartItems.find(item => item.product._id === product._id);
+    if (existingItem && product.stock !== undefined) {
+        if (existingItem.quantity + 1 > product.stock) {
+             toast.error(`Only ${product.stock} items available in stock`);
+             return;
+        }
+    }
+
     try {
         const res = await axios.post(`${API_BASE_URL}${API_ENDPOINTS.cart.add}`, 
             { productId: product._id, quantity: 1 },
@@ -56,7 +71,9 @@ export const CartProvider = ({ children }) => {
         toast.success(`${product.productname} added to cart!`);
     } catch (err) {
         console.error("Add cart error", err);
-        toast.error("Failed to add to cart");
+        // Improved error handling
+        const msg = err.response?.data?.msg || "Failed to add to cart";
+        toast.error(msg);
     }
   };
 
@@ -69,6 +86,19 @@ export const CartProvider = ({ children }) => {
     } catch (err) {
         console.error("Remove cart error", err);
     }
+  };
+
+  const updateCartItem = async (productId, quantity) => {
+      try {
+          const res = await axios.put(`${API_BASE_URL}${API_ENDPOINTS.cart.update}`, 
+            { productId, quantity },
+            { headers: getHeaders() }
+          );
+          setCartItems(res.data);
+      } catch (err) {
+          console.error("Update cart error", err);
+          toast.error("Failed to update quantity");
+      }
   };
 
   const clearCart = async () => {
@@ -132,7 +162,7 @@ export const CartProvider = ({ children }) => {
   };
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, checkout, loading }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateCartItem, clearCart, checkout, loading }}>
       {children}
     </CartContext.Provider>
   );

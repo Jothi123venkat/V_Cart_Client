@@ -1,34 +1,37 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Button,
-  TextField,
-  Table,
-  TableBody,
-  TableCell,
+  Card,
+  CardContent,
   TableContainer,
+  Paper,
+  Table,
   TableHead,
   TableRow,
-  Paper,
+  TableCell,
+  TableBody,
+  Chip,
+  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  IconButton,
-  Chip
+  TextField,
+  DialogActions
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';
 import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 import Swal from 'sweetalert2';
 
 const CategoryManagement = () => {
+  const theme = useTheme();
   const [categories, setCategories] = useState([]);
   const [open, setOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState({ id: null, name: '' });
+  const [currentCategory, setCurrentCategory] = useState({ name: '' });
 
   useEffect(() => {
     fetchCategories();
@@ -36,7 +39,7 @@ const CategoryManagement = () => {
 
   const fetchCategories = async () => {
     try {
-        const res = await axios.get('http://localhost:5000/api/categories');
+        const res = await axios.get(`${API_BASE_URL}/api/categories`);
         setCategories(res.data);
     } catch(err) {
         console.error(err);
@@ -44,19 +47,19 @@ const CategoryManagement = () => {
   };
 
   const handleOpen = (category = null) => {
-    if (category) {
-      setEditMode(true);
-      setCurrentCategory(category);
-    } else {
-      setEditMode(false);
-      setCurrentCategory({ id: null, name: '' });
-    }
-    setOpen(true);
+      if (category) {
+          setEditMode(true);
+          setCurrentCategory(category);
+      } else {
+          setEditMode(false);
+          setCurrentCategory({ name: '' });
+      }
+      setOpen(true);
   };
 
   const handleClose = () => {
-    setOpen(false);
-    setCurrentCategory({ id: null, name: '' });
+      setOpen(false);
+      setCurrentCategory({ name: '' });
   };
 
   const handleSave = async () => {
@@ -66,11 +69,14 @@ const CategoryManagement = () => {
     }
 
     try {
+        const token = localStorage.getItem('vcart_token');
+        const config = { headers: { 'x-auth-token': token } };
+
         if (editMode) {
-          await axios.put(`http://localhost:5000/api/categories/${currentCategory._id}`, { name: currentCategory.name });
+          await axios.put(`${API_BASE_URL}/api/categories/${currentCategory._id}`, { name: currentCategory.name }, config);
           Swal.fire('Success', 'Category updated successfully', 'success');
         } else {
-          await axios.post('http://localhost:5000/api/categories', { name: currentCategory.name });
+          await axios.post(`${API_BASE_URL}/api/categories`, { name: currentCategory.name }, config);
           Swal.fire('Success', 'Category added successfully', 'success');
         }
         fetchCategories();
@@ -91,7 +97,8 @@ const CategoryManagement = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-            await axios.delete(`http://localhost:5000/api/categories/${id}`);
+            const token = localStorage.getItem('vcart_token');
+            await axios.delete(`${API_BASE_URL}/api/categories/${id}`, { headers: { 'x-auth-token': token } });
             fetchCategories();
             Swal.fire('Deleted!', 'Category has been deleted.', 'success');
         } catch(err) {
@@ -102,20 +109,20 @@ const CategoryManagement = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ p: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold">Category Management</Typography>
+        <Typography variant="h4" fontWeight="bold" color={theme.palette.text.primary}>Category Management</Typography>
         <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>
           Add Category
         </Button>
       </Box>
 
-      <Card>
+      <Card sx={{ bgcolor: theme.palette.background.paper, color: theme.palette.text.primary }}>
         <CardContent>
-          <TableContainer component={Paper} variant="outlined">
+          <TableContainer component={Paper} variant="outlined" sx={{ borderColor: theme.palette.divider }}>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
                   <TableCell><strong>ID</strong></TableCell>
                   <TableCell><strong>Category Name</strong></TableCell>
                   <TableCell><strong>Products</strong></TableCell>
@@ -128,7 +135,7 @@ const CategoryManagement = () => {
                     <TableCell>{category._id}</TableCell>
                     <TableCell>{category.name}</TableCell>
                     <TableCell>
-                      <Chip label={`- products`} size="small" />
+                      <Chip label={`${0} products`} size="small" variant="outlined" /> {/* Placeholder count */}
                     </TableCell>
                     <TableCell>
                       <IconButton color="primary" onClick={() => handleOpen(category)}>
@@ -147,8 +154,8 @@ const CategoryManagement = () => {
       </Card>
 
       {/* Add/Edit Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{editMode ? 'Edit Category' : 'Add New Category'}</DialogTitle>
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: theme.palette.background.paper } }}>
+        <DialogTitle sx={{ color: theme.palette.text.primary }}>{editMode ? 'Edit Category' : 'Add New Category'}</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -157,6 +164,7 @@ const CategoryManagement = () => {
             fullWidth
             value={currentCategory.name}
             onChange={(e) => setCurrentCategory({ ...currentCategory, name: e.target.value })}
+            sx={{ mt: 1 }}
           />
         </DialogContent>
         <DialogActions>

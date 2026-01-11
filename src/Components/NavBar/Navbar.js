@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { useProducts } from "../../context/ProductContext";
+import { useSiteConfig } from "../../context/SiteConfigContext";
 import { useState, useEffect } from "react";
 import axios from 'axios';
 import io from 'socket.io-client';
@@ -105,6 +106,7 @@ const Navbar = () => {
   const { cartItems } = useCart();
   const { user, isAuthenticated, logout } = useAuth();
   const { products } = useProducts();
+  const { siteConfig } = useSiteConfig();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
@@ -402,28 +404,54 @@ const Navbar = () => {
           </IconButton>
 
           {/* Logo */}
-          <Typography
-            variant="h5"
-            noWrap
-            component="div"
+          <Box 
             onClick={() => navigate('/')}
-            sx={{
-              display: { xs: 'none', sm: 'block' },
-              cursor: 'pointer',
-              fontFamily: 'Poppins',
-              fontWeight: 800,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '-0.5px',
-              transition: 'transform 0.3s ease',
-              '&:hover': {
-                transform: 'scale(1.05)',
-              },
+            sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                cursor: 'pointer',
+                mr: 2,
+                transition: 'transform 0.3s ease',
+                '&:hover': { transform: 'scale(1.05)' }
             }}
           >
-            V-CART
-          </Typography>
+            {siteConfig?.logoUrl && (
+                <Box
+                    component="img"
+                    src={siteConfig.logoUrl}
+                    alt="Logo"
+                    sx={{ 
+                        height: 32, 
+                        mr: 1.5,
+                        display: { xs: 'none', sm: 'block' }
+                    }}
+                />
+            )}
+            <Typography
+                variant="h5"
+                noWrap
+                component="div"
+                sx={{
+                display: { xs: 'none', sm: 'block' },
+                fontFamily: 'Poppins',
+                fontWeight: 800,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                letterSpacing: '-0.5px',
+                }}
+            >
+                {siteConfig?.brandName || 'V-CART'}
+            </Typography>
+            <ShoppingCartIcon 
+                sx={{ 
+                    ml: 1, 
+                    display: { xs: 'none', sm: 'block' },
+                    fontSize: 28,
+                    color: theme.palette.primary.main
+                }} 
+            />
+          </Box>
 
           {/* Search Bar */}
           <Search>

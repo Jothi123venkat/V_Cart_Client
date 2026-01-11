@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '@mui/material/styles';
 import { 
   Dialog, DialogTitle, DialogContent, Typography, Grid, 
   List, ListItem, ListItemText, Divider, Chip, Box, Tabs, Tab,
@@ -9,6 +10,7 @@ import axios from 'axios';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
 
 const UserDetailView = ({ open, onClose, user }) => {
+  const theme = useTheme();
   const [tabIndex, setTabIndex] = useState(0);
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -37,8 +39,8 @@ const UserDetailView = ({ open, onClose, user }) => {
   if (!user) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { bgcolor: theme.palette.background.paper } }}>
+      <DialogTitle sx={{ color: theme.palette.text.primary }}>
         User Details: {user.name}
         <Box mt={1}>
            <Chip 
@@ -67,30 +69,30 @@ const UserDetailView = ({ open, onClose, user }) => {
             <Grid container spacing={3} sx={{ p: 1 }}>
               <Grid item xs={12} sm={6}>
                 <Typography variant="caption" color="text.secondary">Full Name</Typography>
-                <Typography variant="body1" fontWeight="bold" gutterBottom>{user.name}</Typography>
+                <Typography variant="body1" fontWeight="bold" gutterBottom color={theme.palette.text.primary}>{user.name}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="caption" color="text.secondary">Email Address</Typography>
-                <Typography variant="body1" fontWeight="bold" gutterBottom>{user.email}</Typography>
+                <Typography variant="body1" fontWeight="bold" gutterBottom color={theme.palette.text.primary}>{user.email}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="caption" color="text.secondary">Phone Number</Typography>
-                <Typography variant="body1" gutterBottom>{user.phone || 'Not provided'}</Typography>
+                <Typography variant="body1" gutterBottom color={theme.palette.text.primary}>{user.phone || 'Not provided'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
                   <Typography variant="caption" color="text.secondary">Member Since</Typography>
-                  <Typography variant="body1" gutterBottom>{new Date(user.createdAt).toLocaleDateString()}</Typography>
+                  <Typography variant="body1" gutterBottom color={theme.palette.text.primary}>{new Date(user.createdAt).toLocaleDateString()}</Typography>
               </Grid>
               <Grid item xs={12}>
                   <Divider sx={{ my: 2 }} />
-                  <Typography variant="h6" gutterBottom>Saved Shipping Addresses</Typography>
+                  <Typography variant="h6" gutterBottom color={theme.palette.text.primary}>Saved Shipping Addresses</Typography>
                   {user.addresses && user.addresses.length > 0 ? (
                       <Grid container spacing={2}>
                         {user.addresses.map((addr, idx) => (
                             <Grid item xs={12} sm={6} key={idx}>
-                              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: theme.palette.background.default }}>
                                 <Box display="flex" justifyContent="space-between">
-                                  <Typography variant="subtitle2" fontWeight="bold">{addr.label}</Typography>
+                                  <Typography variant="subtitle2" fontWeight="bold" color={theme.palette.text.primary}>{addr.label}</Typography>
                                   {addr.isDefault && <Chip label="Default" size="small" color="primary" sx={{ height: 20 }} />}
                                 </Box>
                                 <Typography variant="body2" color="text.secondary">
@@ -115,7 +117,7 @@ const UserDetailView = ({ open, onClose, user }) => {
                             <ListItem alignItems="flex-start" sx={{ px: 1 }}>
                                 <ListItemText 
                                     primary={
-                                      <Typography variant="subtitle2" fontWeight="bold">
+                                      <Typography variant="subtitle2" fontWeight="bold" color={theme.palette.text.primary}>
                                         {log.action.replace(/_/g, ' ').toUpperCase()}
                                       </Typography>
                                     } 
@@ -147,10 +149,10 @@ const UserDetailView = ({ open, onClose, user }) => {
                 {loadingOrders ? (
                   <Box display="flex" justifyContent="center" py={5}><CircularProgress /></Box>
                 ) : orders.length > 0 ? (
-                  <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                  <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, borderColor: theme.palette.divider }}>
                     <Table size="small">
                       <TableHead>
-                        <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                        <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
                           <TableCell><strong>OrderID</strong></TableCell>
                           <TableCell><strong>Date</strong></TableCell>
                           <TableCell><strong>Total</strong></TableCell>
@@ -158,6 +160,7 @@ const UserDetailView = ({ open, onClose, user }) => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
+
                         {orders.map((order) => (
                           <TableRow key={order._id}>
                             <TableCell>#{order._id.substring(order._id.length - 6)}</TableCell>

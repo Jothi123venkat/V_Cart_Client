@@ -43,6 +43,8 @@ const Products = () => {
     setKeyword(query);
     if (categoryParam) {
       setSelectedCategories([categoryParam]);
+    } else {
+      setSelectedCategories([]);
     }
   }, [searchParams]);
 

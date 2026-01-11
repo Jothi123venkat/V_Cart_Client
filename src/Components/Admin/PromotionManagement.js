@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Card,
@@ -24,13 +25,14 @@ import {
   Stack,
   Avatar
 } from '@mui/material';
-import { Add, LocalOffer, Delete, CheckCircle, Cancel, Edit } from '@mui/icons-material';
+import { Add, LocalOffer, Delete, CheckCircle, Cancel } from '@mui/icons-material';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import io from 'socket.io-client';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
 
 const PromotionManagement = () => {
+  const theme = useTheme();
   const [promotions, setPromotions] = useState([]);
   const [open, setOpen] = useState(false);
   const [newPromo, setNewPromo] = useState({
@@ -136,7 +138,7 @@ const PromotionManagement = () => {
     <Box sx={{ p: 1 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
         <Box>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
+            <Typography variant="h4" fontWeight="bold" gutterBottom color={theme.palette.text.primary}>
                 Promotions & Discounts
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -153,12 +155,12 @@ const PromotionManagement = () => {
         </Button>
       </Stack>
 
-      <Card sx={{ borderRadius: 2, boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)' }}>
+      <Card sx={{ borderRadius: 2, boxShadow: theme.shadows[1], bgcolor: theme.palette.background.paper }}>
         <CardContent sx={{ p: 0 }}>
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#fafafa' }}>
+                <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
                   <TableCell><strong>Coupon Details</strong></TableCell>
                   <TableCell><strong>Discount</strong></TableCell>
                   <TableCell><strong>Usage / Limit</strong></TableCell>
@@ -172,11 +174,11 @@ const PromotionManagement = () => {
                   <TableRow key={promo._id} hover>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: 'secondary.light' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.secondary.light }}>
                             <LocalOffer fontSize="small" />
                         </Avatar>
                         <Box>
-                            <Typography variant="subtitle2" fontWeight="bold">{promo.code}</Typography>
+                            <Typography variant="subtitle2" fontWeight="bold" color={theme.palette.text.primary}>{promo.code}</Typography>
                             <Typography variant="caption" color="text.secondary">
                                 Exp: {promo.expiryDate ? new Date(promo.expiryDate).toLocaleDateString() : 'Never'}
                             </Typography>
@@ -193,11 +195,11 @@ const PromotionManagement = () => {
                         />
                     </TableCell>
                     <TableCell>
-                        <Typography variant="body2">
+                        <Typography variant="body2" color={theme.palette.text.primary}>
                             {promo.usedCount || 0} / {promo.usageLimit || '∞'}
                         </Typography>
                     </TableCell>
-                    <TableCell>₹{promo.minPurchase || 0}</TableCell>
+                    <TableCell sx={{ color: theme.palette.text.primary }}>₹{promo.minPurchase || 0}</TableCell>
                     <TableCell>
                       <Chip 
                         label={promo.active ? 'Active' : 'Inactive'} 
@@ -238,8 +240,9 @@ const PromotionManagement = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-        <DialogTitle fontWeight="bold">Create New Promotion</DialogTitle>
+      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth PaperProps={{ sx: { bgcolor: theme.palette.background.paper } }}>
+        <DialogTitle fontWeight="bold" color={theme.palette.text.primary}>Create New Promotion</DialogTitle>
+
         <DialogContent>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
               Configure a new coupon code for your customers.

@@ -22,6 +22,7 @@ import {
   Snackbar,
   Alert
 } from '@mui/material';
+import { useTheme, alpha } from '@mui/material/styles';
 import {
   TrendingUp,
   ShoppingCart,
@@ -56,6 +57,7 @@ import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({
     orders: [],
@@ -157,7 +159,7 @@ const AdminDashboard = () => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
-            <Typography variant="h4" fontWeight="bold" color="#1a202c">
+            <Typography variant="h4" fontWeight="bold" color={theme.palette.text.primary}>
                 Commerce Overview
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -175,32 +177,33 @@ const AdminDashboard = () => {
               elevation={0} 
               onClick={() => navigate(stat.path)}
               sx={{ 
-                border: '1px solid #e2e8f0', 
+                border: `1px solid ${theme.palette.divider}`, 
                 borderRadius: 4,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease-in-out',
+                bgcolor: theme.palette.background.paper,
                 '&:hover': { 
                   transform: 'translateY(-4px)', 
-                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                  boxShadow: theme.shadows[4],
                   borderColor: stat.color,
-                  bgcolor: `${stat.color}05`
+                  bgcolor: theme.palette.mode === 'light' ? `${stat.color}05` : alpha(stat.color, 0.1)
                 }
             }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
-                  <Avatar sx={{ bgcolor: `${stat.color}10`, color: stat.color, borderRadius: 2 }}>
+                  <Avatar sx={{ bgcolor: alpha(stat.color, 0.1), color: stat.color, borderRadius: 2 }}>
                     {stat.icon}
                   </Avatar>
                   <Chip 
                     label={stat.trend} 
                     size="small" 
-                    sx={{ bgcolor: `${stat.color}05`, color: stat.color, fontWeight: 'bold', fontSize: '0.7rem' }} 
+                    sx={{ bgcolor: alpha(stat.color, 0.05), color: stat.color, fontWeight: 'bold', fontSize: '0.7rem' }} 
                   />
                 </Box>
                 <Typography variant="body2" color="text.secondary" fontWeight="medium" gutterBottom>
                   {stat.title}
                 </Typography>
-                <Typography variant="h4" fontWeight="bold">
+                <Typography variant="h4" fontWeight="bold" color={theme.palette.text.primary}>
                   {stat.value}
                 </Typography>
               </CardContent>
@@ -212,10 +215,10 @@ const AdminDashboard = () => {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {/* Sales Chart */}
         <Grid item xs={12} md={8}>
-          <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 4 }}>
+          <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 4, bgcolor: theme.palette.background.paper }}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" fontWeight="bold">Revenue Analysis</Typography>
+                <Typography variant="h6" fontWeight="bold" color={theme.palette.text.primary}>Revenue Analysis</Typography>
                 <Stack direction="row" spacing={1}>
                     <Chip label="7 Days" size="small" color="primary" />
                     <Chip label="30 Days" size="small" variant="outlined" />
@@ -225,17 +228,23 @@ const AdminDashboard = () => {
                 <AreaChart data={salesChartData}>
                   <defs>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1976d2" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#1976d2" stopOpacity={0}/>
+                      <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor={theme.palette.primary.main} stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#718096', fontSize: 12}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#718096', fontSize: 12}} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: theme.palette.text.secondary, fontSize: 12}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: theme.palette.text.secondary, fontSize: 12}} />
                   <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                    contentStyle={{ 
+                        borderRadius: '12px', 
+                        border: 'none', 
+                        boxShadow: theme.shadows[3],
+                        backgroundColor: theme.palette.background.paper,
+                        color: theme.palette.text.primary
+                    }}
                   />
-                  <Area type="monotone" dataKey="revenue" stroke="#1976d2" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                  <Area type="monotone" dataKey="revenue" stroke={theme.palette.primary.main} strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>
@@ -244,9 +253,9 @@ const AdminDashboard = () => {
 
         {/* Category Pie */}
         <Grid item xs={12} md={4}>
-          <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 4, height: '100%' }}>
+          <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 4, height: '100%', bgcolor: theme.palette.background.paper }}>
             <CardContent>
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>Inventory Split</Typography>
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }} color={theme.palette.text.primary}>Inventory Split</Typography>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
@@ -260,7 +269,7 @@ const AdminDashboard = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip contentStyle={{ backgroundColor: theme.palette.background.paper, borderRadius: '8px', border: 'none', boxShadow: theme.shadows[2] }} itemStyle={{ color: theme.palette.text.primary }} />
                 </PieChart>
               </ResponsiveContainer>
               <Stack spacing={1} sx={{ mt: 2 }}>
@@ -268,7 +277,7 @@ const AdminDashboard = () => {
                   <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                         <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: COLORS[idx % COLORS.length] }} />
-                        <Typography variant="caption" fontWeight="medium">{item.name}</Typography>
+                        <Typography variant="caption" fontWeight="medium" color={theme.palette.text.primary}>{item.name}</Typography>
                     </Stack>
                     <Typography variant="caption" color="text.secondary">{item.value} items</Typography>
                   </Box>
@@ -282,32 +291,32 @@ const AdminDashboard = () => {
       {/* Recent Tables Section */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
-            <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 4 }}>
+            <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 4, bgcolor: theme.palette.background.paper }}>
                 <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                        <Typography variant="h6" fontWeight="bold">Recent Orders</Typography>
+                        <Typography variant="h6" fontWeight="bold" color={theme.palette.text.primary}>Recent Orders</Typography>
                         <Button size="small" endIcon={<ArrowUpward sx={{ transform: 'rotate(45deg)' }} />} onClick={() => navigate('/admin/orders')}>View All</Button>
                     </Box>
                     <TableContainer>
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Customer</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Amount</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.secondary }}>Customer</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.secondary }}>Status</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.secondary }}>Amount</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {data.orders.slice(0, 5).map((order) => (
                                     <TableRow key={order._id} hover>
                                         <TableCell>
-                                            <Typography variant="body2" fontWeight="bold">{order.user?.name || 'Guest'}</Typography>
+                                            <Typography variant="body2" fontWeight="bold" color={theme.palette.text.primary}>{order.user?.name || 'Guest'}</Typography>
                                             <Typography variant="caption" color="text.secondary">{new Date(order.date).toLocaleDateString()}</Typography>
                                         </TableCell>
                                         <TableCell>
                                             <Chip label={order.status} size="small" sx={{ fontSize: '0.7rem' }} color={order.status === 'Processing' ? 'warning' : 'success'} />
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 'bold' }}>₹{order.total}</TableCell>
+                                        <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>₹{order.total}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -318,26 +327,26 @@ const AdminDashboard = () => {
         </Grid>
 
         <Grid item xs={12} md={6}>
-            <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 4 }}>
+            <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 4, bgcolor: theme.palette.background.paper }}>
                 <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                        <Typography variant="h6" fontWeight="bold">Active Tickets</Typography>
+                        <Typography variant="h6" fontWeight="bold" color={theme.palette.text.primary}>Active Tickets</Typography>
                         <Button size="small" onClick={() => navigate('/admin/support')}>Manage</Button>
                     </Box>
                     <TableContainer>
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Subject</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Priority</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.secondary }}>Subject</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.secondary }}>Priority</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.secondary }}>Date</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {data.tickets.filter(t => t.status !== 'Resolved').slice(0, 5).map((ticket) => (
                                     <TableRow key={ticket._id} hover>
                                         <TableCell>
-                                            <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>{ticket.subject}</Typography>
+                                            <Typography variant="body2" noWrap sx={{ maxWidth: 200, color: theme.palette.text.primary }}>{ticket.subject}</Typography>
                                             <Typography variant="caption" color="text.secondary">{ticket.user?.name}</Typography>
                                         </TableCell>
                                         <TableCell>
@@ -346,7 +355,7 @@ const AdminDashboard = () => {
                                             </Typography>
                                         </TableCell>
                                         <TableCell>
-                                            <Typography variant="caption">{new Date(ticket.date).toLocaleDateString()}</Typography>
+                                            <Typography variant="caption" color={theme.palette.text.secondary}>{new Date(ticket.date).toLocaleDateString()}</Typography>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -380,4 +389,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

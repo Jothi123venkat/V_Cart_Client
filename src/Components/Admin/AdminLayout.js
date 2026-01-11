@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Drawer,
@@ -38,6 +39,7 @@ import {
 import { useAdmin } from '../../context/AdminContext';
 import axios from 'axios';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
+import ThemeToggle from '../Shared/ThemeToggle';
 
 const drawerWidth = 260;
 
@@ -62,10 +64,12 @@ const menuItems = [
   { text: 'Promotions', icon: <LocalOffer />, path: '/admin/promotions' },
   { text: 'Analytics', icon: <Assessment />, path: '/admin/analytics' },
   { text: 'Support', icon: <Support />, path: '/admin/support' },
+  { text: 'Site Settings', icon: <Settings />, path: '/admin/settings' },
 ];
 
 const AdminLayout = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { adminUser, adminLogout } = useAdmin();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -145,27 +149,30 @@ const AdminLayout = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', bgcolor: '#f3f4f6' }}>
+    <Box sx={{ display: 'flex', bgcolor: theme.palette.background.default, minHeight: '100vh' }}>
       {/* AppBar */}
       <AppBar
         position="fixed"
         sx={{ 
             zIndex: (theme) => theme.zIndex.drawer + 1, 
-            bgcolor: 'white', 
-            color: '#333',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+            bgcolor: theme.palette.background.paper, 
+            color: theme.palette.text.primary,
+            boxShadow: theme.shadows[1],
+            borderBottom: `1px solid ${theme.palette.divider}`
         }}
         elevation={0}
       >
         <Toolbar>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontFamily: 'Playfair Display', fontWeight: 'bold', color: '#1b2430' }}>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontFamily: 'Playfair Display', fontWeight: 'bold', color: theme.palette.primary.main }}>
             V-CART ADMIN
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             
+            <ThemeToggle />
+
             {/* Notifications Bell */}
             <Tooltip title="Notifications">
-              <IconButton onClick={handleNotificationClick} sx={{ color: '#64748b' }}>
+              <IconButton onClick={handleNotificationClick} sx={{ color: theme.palette.text.secondary }}>
                 <Badge badgeContent={unreadCount} color="error">
                   <Notifications />
                 </Badge>
@@ -181,7 +188,9 @@ const AdminLayout = () => {
                 sx: { 
                   width: 320, 
                   maxHeight: 400,
-                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' 
+                  boxShadow: theme.shadows[8],
+                  bgcolor: theme.palette.background.paper,
+                  backgroundImage: 'none'
                 }
               }}
               transformOrigin={{ horizontal: 'right', vertical: 'top' }}
@@ -213,8 +222,8 @@ const AdminLayout = () => {
                       py: 1.5, 
                       px: 2, 
                       whiteSpace: 'normal',
-                      bgcolor: notif.isRead ? 'transparent' : 'rgba(25, 118, 210, 0.04)',
-                      borderLeft: notif.isRead ? 'none' : '4px solid #1976d2',
+                      bgcolor: notif.isRead ? 'transparent' : theme.palette.action.hover,
+                      borderLeft: notif.isRead ? 'none' : `4px solid ${theme.palette.primary.main}`,
                       display: 'block'
                     }}
                   >
@@ -222,7 +231,7 @@ const AdminLayout = () => {
                       <Typography variant="subtitle2" fontWeight={notif.isRead ? 500 : 700}>
                         {notif.title}
                       </Typography>
-                      {!notif.isRead && <Circle sx={{ fontSize: 10, color: '#1976d2', mt: 0.5 }} />}
+                      {!notif.isRead && <Circle sx={{ fontSize: 10, color: 'primary.main', mt: 0.5 }} />}
                     </Box>
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
                       {notif.message}
@@ -252,10 +261,10 @@ const AdminLayout = () => {
                 <Typography variant="subtitle2" fontWeight="bold">{adminUser?.name || 'Administrator'}</Typography>
                 <Typography variant="caption" color="text.secondary">{adminUser?.email}</Typography>
             </Box>
-            <Avatar sx={{ bgcolor: '#1b2430', color: '#c5a059' }}>
+            <Avatar sx={{ bgcolor: theme.palette.primary.main, color: theme.palette.primary.contrastText }}>
               {adminUser?.name?.charAt(0) || 'A'}
             </Avatar>
-            <IconButton onClick={handleLogout} sx={{ color: '#64748b' }}>
+            <IconButton onClick={handleLogout} sx={{ color: theme.palette.text.secondary }}>
               <Logout />
             </IconButton>
           </Box>
@@ -271,9 +280,10 @@ const AdminLayout = () => {
           '& .MuiDrawer-paper': {
             width: drawerWidth,
             boxSizing: 'border-box',
-            bgcolor: '#1b2430', // Dark Navy
-            color: '#cbd5e1',
-            borderRight: 'none'
+            // Keep dark navy sidebar in light mode for professional contrast, but adapt to paper in dark mode
+            bgcolor: theme.palette.mode === 'light' ? '#1b2430' : theme.palette.background.paper,
+            color: theme.palette.mode === 'light' ? '#cbd5e1' : theme.palette.text.primary,
+            borderRight: `1px solid ${theme.palette.divider}`
           },
         }}
       >
@@ -287,8 +297,13 @@ const AdminLayout = () => {
                     sx={{
                         mx: 2,
                         borderRadius: 2,
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
-                        '&.Mui-selected': { bgcolor: '#c5a059', color: 'white' }
+                        '&:hover': { 
+                            bgcolor: theme.palette.mode === 'light' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover 
+                        },
+                        '&.Mui-selected': { 
+                            bgcolor: theme.palette.primary.main, 
+                            color: theme.palette.primary.contrastText 
+                        }
                     }}
                 >
                   <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>

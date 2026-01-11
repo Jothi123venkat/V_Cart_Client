@@ -3,6 +3,7 @@ import { CartProvider } from './context/CartContext';
 import { ProductProvider } from './context/ProductContext';
 import { AdminProvider } from './context/AdminContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SiteConfigProvider } from './context/SiteConfigContext';
 import Login from './Components/Auth/Login';
 import Signup from './Components/Auth/Signup';
 import ProtectedUserRoute from './Components/Auth/ProtectedUserRoute';
@@ -28,6 +29,7 @@ import UserManagement from './Components/Admin/UserManagement'
 import AdminTickets from './Components/Admin/AdminTickets'
 import SupportPage from './Components/Support/SupportPage';
 import InventoryManagement from './Components/Admin/InventoryManagement'
+import SiteSettings from './Components/Admin/SiteSettings';
 import Footer from './Components/Footer/Footer';
 
 import { ThemeProvider } from '@mui/material/styles';
@@ -36,6 +38,7 @@ import { ThemeContextProvider, useThemeMode } from './context/ThemeContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import setupAxiosInterceptors from './utils/axiosInterceptors';
+import ScrollToTop from './Components/ScrollToTop';
 
 const PublicLayout = () => (
   <>
@@ -112,6 +115,7 @@ const AppContent = () => {
           <Route path="users" element={<UserManagement />} />
           <Route path="support" element={<AdminTickets />} />
           <Route path="inventory" element={<InventoryManagement />} />
+          <Route path="settings" element={<SiteSettings />} />
         </Route>
 
         {/* Fallback for AddProduct standalone if needed or move to admin */}
@@ -143,11 +147,14 @@ const ThemeProviderWrapper = () => {
       <CssBaseline />
       <AuthProvider>
         <AdminProvider>
-          <ProductProvider>
-            <CartProvider>
-              <AppContent />
-            </CartProvider>
-          </ProductProvider>
+          <SiteConfigProvider>
+            <ProductProvider>
+              <CartProvider>
+                <ScrollToTop />
+                <AppContent />
+              </CartProvider>
+            </ProductProvider>
+          </SiteConfigProvider>
         </AdminProvider>
       </AuthProvider>
       <ToastContainer

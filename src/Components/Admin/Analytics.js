@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Card,
@@ -48,23 +49,27 @@ const productData = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const Analytics = () => {
+  const theme = useTheme();
+
   return (
     <Box>
-      <Typography variant="h4" fontWeight="bold" className="mb-4">
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 4, color: theme.palette.text.primary }}>
         Analytics & Reports
       </Typography>
 
       {/* Sales Trend */}
-      <Card className="mb-4">
+      <Card sx={{ mb: 4, bgcolor: theme.palette.background.paper, boxShadow: theme.shadows[1] }}>
         <CardContent>
-          <Typography variant="h6" className="mb-3">Sales Trend (Last 6 Months)</Typography>
+          <Typography variant="h6" sx={{ mb: 3, color: theme.palette.text.primary }}>Sales Trend (Last 6 Months)</Typography>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={salesData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+              <XAxis dataKey="month" stroke={theme.palette.text.secondary} />
+              <YAxis stroke={theme.palette.text.secondary} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: theme.palette.background.paper, borderColor: theme.palette.divider, color: theme.palette.text.primary }}
+              />
+              <Legend wrapperStyle={{ color: theme.palette.text.primary }} />
               <Line type="monotone" dataKey="sales" stroke="#8884d8" strokeWidth={2} />
               <Line type="monotone" dataKey="revenue" stroke="#82ca9d" strokeWidth={2} />
             </LineChart>
@@ -75,15 +80,17 @@ const Analytics = () => {
       <Grid container spacing={3}>
         {/* Revenue Chart */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={{ bgcolor: theme.palette.background.paper, boxShadow: theme.shadows[1] }}>
             <CardContent>
-              <Typography variant="h6" className="mb-3">Monthly Revenue</Typography>
+              <Typography variant="h6" sx={{ mb: 3, color: theme.palette.text.primary }}>Monthly Revenue</Typography>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={salesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                  <XAxis dataKey="month" stroke={theme.palette.text.secondary} />
+                  <YAxis stroke={theme.palette.text.secondary} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: theme.palette.background.paper, borderColor: theme.palette.divider, color: theme.palette.text.primary }}
+                  />
                   <Bar dataKey="revenue" fill="#8884d8" />
                 </BarChart>
               </ResponsiveContainer>
@@ -93,9 +100,9 @@ const Analytics = () => {
 
         {/* Product Distribution */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={{ bgcolor: theme.palette.background.paper, boxShadow: theme.shadows[1] }}>
             <CardContent>
-              <Typography variant="h6" className="mb-3">Product Category Distribution</Typography>
+              <Typography variant="h6" sx={{ mb: 3, color: theme.palette.text.primary }}>Product Category Distribution</Typography>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -112,7 +119,9 @@ const Analytics = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: theme.palette.background.paper, borderColor: theme.palette.divider, color: theme.palette.text.primary }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -122,5 +131,6 @@ const Analytics = () => {
     </Box>
   );
 };
+
 
 export default Analytics;

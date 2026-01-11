@@ -19,8 +19,10 @@ import {
 import { Save, Cancel, Edit } from '@mui/icons-material';
 import { useProducts } from '../../context/ProductContext';
 import Swal from 'sweetalert2';
+import { useTheme } from '@mui/material/styles';
 
 const InventoryManagement = () => {
+  const theme = useTheme();
   const { products, updateProduct } = useProducts();
   const [editingId, setEditingId] = useState(null);
   const [editStock, setEditStock] = useState(0);
@@ -61,11 +63,11 @@ const InventoryManagement = () => {
 
   return (
     <Box>
-      <Typography variant="h4" fontWeight="bold" className="mb-4">
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 4, color: theme.palette.text.primary }}>
         Inventory Status
       </Typography>
 
-      <Card>
+      <Card sx={{ bgcolor: theme.palette.background.paper, color: theme.palette.text.primary }}>
         <CardContent>
             <TextField 
                 placeholder="Search..." 
@@ -74,10 +76,10 @@ const InventoryManagement = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
-          <TableContainer component={Paper} variant="outlined">
+          <TableContainer component={Paper} variant="outlined" sx={{ borderColor: theme.palette.divider }}>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
                   <TableCell><strong>Product</strong></TableCell>
                   <TableCell><strong>SKU / ID</strong></TableCell>
                   <TableCell><strong>Current Stock</strong></TableCell>

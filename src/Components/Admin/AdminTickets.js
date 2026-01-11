@@ -1,181 +1,139 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
   Box,
+  Typography,
+  Button,
+  Grid,
   Card,
   CardContent,
-  Typography,
-  Grid,
-  Chip,
-  Button,
+  Avatar,
+  Paper,
+  Tabs,
+  Tab,
   TextField,
   InputAdornment,
-  Table,
-  TableBody,
-  TableCell,
+  IconButton,
   TableContainer,
+  Table,
   TableHead,
   TableRow,
-  Paper,
-  IconButton,
-  Tooltip,
+  TableCell,
+  TableBody,
   CircularProgress,
+  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   Divider,
-  Avatar,
-  Tab,
-  Tabs
+  DialogActions,
+  Chip,
+  Stack
 } from '@mui/material';
 import {
+  Refresh,
+  ConfirmationNumber,
+  ErrorOutline,
+  PriorityHigh,
+  CheckCircle,
   Search,
   FilterList,
-  Reply,
-  Visibility,
-  CheckCircle,
-  PendingActions,
-  ErrorOutline,
   Person,
+  Visibility,
+  Reply,
   Email,
   CalendarToday,
-  PriorityHigh,
-  ConfirmationNumber,
-  Refresh
+  Cancel
 } from '@mui/icons-material';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
 import UserDetailView from './UserDetailView';
+import Swal from 'sweetalert2';
 
 const AdminTickets = () => {
+  const theme = useTheme();
   const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [tabValue, setTabValue] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [tabValue, setTabValue] = useState(0);
+  
+  // Response Dialog State
   const [openRespondDialog, setOpenRespondDialog] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
   const [adminResponse, setAdminResponse] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  
-  // Stats
-  const [stats, setStats] = useState({
-    total: 0,
-    open: 0,
-    resolved: 0,
-    high: 0
-  });
 
-  // Customer Detail State
+  // Customer View State
   const [viewCustomerOpen, setViewCustomerOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-  const fetchTickets = useCallback(async () => {
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  const fetchTickets = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('vcart_token');
+      // Using the endpoints defined in api.js
       const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.tickets.admin}`, {
         headers: { 'x-auth-token': token }
       });
       setTickets(res.data);
-      
-      // Calculate Stats
-      const total = res.data.length;
-      const open = res.data.filter(t => t.status === 'Open').length;
-      const resolved = res.data.filter(t => t.status === 'Resolved').length;
-      const high = res.data.filter(t => t.priority === 'High' && t.status !== 'Resolved').length;
-      
-      setStats({ total, open, resolved, high });
     } catch (err) {
-      console.error("Fetch tickets error", err);
-      Swal.fire('Error', 'Failed to load support tickets', 'error');
+      console.error("Failed to fetch tickets", err);
+      // Fallback for demo if API fails or is not implemented yet
+        // setTickets([]); 
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
+  };
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
 
-  const handleRespond = (ticket) => {
-    setSelectedTicket(ticket);
-    setAdminResponse(ticket.adminResponse || '');
-    setOpenRespondDialog(true);
-  };
+  const stats = useMemo(() => {
+    return {
+      total: tickets.length,
+      open: tickets.filter(t => t.status === 'Open').length,
+      high: tickets.filter(t => t.priority === 'High').length,
+      resolved: tickets.filter(t => t.status === 'Resolved').length
+    };
+  }, [tickets]);
 
-  const handleViewCustomer = async (userId) => {
-    try {
-        const token = localStorage.getItem('vcart_token');
-        const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.admin.getById(userId)}`, {
-            headers: { 'x-auth-token': token }
-        });
-        setSelectedCustomer(res.data);
-        setViewCustomerOpen(true);
-    } catch (err) {
-        console.error("Fetch customer error", err);
-        Swal.fire('Error', 'Failed to fetch customer details', 'error');
+  const filteredTickets = useMemo(() => {
+    let filtered = tickets;
+
+    // Filter by Tab
+    if (tabValue === 1) filtered = filtered.filter(t => t.status === 'Open');
+    if (tabValue === 2) filtered = filtered.filter(t => t.status === 'In Progress');
+    if (tabValue === 3) filtered = filtered.filter(t => t.status === 'Resolved');
+
+    // Filter by Search
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter(t => 
+        t._id.toLowerCase().includes(lowerSearch) ||
+        t.subject.toLowerCase().includes(lowerSearch) ||
+        t.user?.name?.toLowerCase().includes(lowerSearch) ||
+        t.user?.email?.toLowerCase().includes(lowerSearch)
+      );
     }
-  };
 
-  const submitResponse = async () => {
-    if (!adminResponse.trim()) {
-      Swal.fire('Error', 'Please enter a response message', 'error');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const token = localStorage.getItem('vcart_token');
-      await axios.put(`${API_BASE_URL}${API_ENDPOINTS.tickets.respond(selectedTicket._id)}`, {
-        adminResponse: adminResponse,
-        status: 'Resolved'
-      }, {
-        headers: { 'x-auth-token': token }
-      });
-
-      Swal.fire({
-        title: 'Success!',
-        text: 'Response sent and ticket marked as resolved.',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
-      });
-      
-      setOpenRespondDialog(false);
-      fetchTickets();
-    } catch (err) {
-      console.error("Update ticket error", err);
-      Swal.fire('Error', 'Failed to update ticket', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = 
-      ticket.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket._id.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (tabValue === 0) return matchesSearch; // All
-    if (tabValue === 1) return matchesSearch && ticket.status === 'Open';
-    if (tabValue === 2) return matchesSearch && ticket.status === 'In Progress';
-    if (tabValue === 3) return matchesSearch && ticket.status === 'Resolved';
-    return matchesSearch;
-  });
+    return filtered;
+  }, [tickets, tabValue, searchTerm]);
 
   const getStatusChip = (status) => {
+    let color = 'default';
+    let icon = null;
     switch (status) {
-      case 'Open': return <Chip size="small" label="Open" color="error" icon={<ErrorOutline fontSize="small" />} />;
-      case 'In Progress': return <Chip size="small" label="In Progress" color="warning" icon={<PendingActions fontSize="small" />} />;
-      case 'Resolved': return <Chip size="small" label="Resolved" color="success" icon={<CheckCircle fontSize="small" />} />;
-      default: return <Chip size="small" label={status} />;
+      case 'Open': color = 'error'; icon = <ErrorOutline fontSize="small" />; break;
+      case 'In Progress': color = 'warning'; icon = <Refresh fontSize="small" />; break;
+      case 'Resolved': color = 'success'; icon = <CheckCircle fontSize="small" />; break;
+      default: break;
     }
+    return <Chip label={status} color={color} size="small" icon={icon} sx={{ fontWeight: 'bold' }} />;
   };
 
   const getPriorityColor = (priority) => {
@@ -183,15 +141,71 @@ const AdminTickets = () => {
       case 'High': return '#f44336';
       case 'Medium': return '#ff9800';
       case 'Low': return '#4caf50';
-      default: return '#757575';
+      default: return '#9e9e9e';
     }
+  };
+
+  const handleRespond = (ticket) => {
+    setSelectedTicket(ticket);
+    setAdminResponse(''); // Reset response
+    setOpenRespondDialog(true);
+  };
+
+  const submitResponse = async () => {
+    if (!adminResponse.trim()) {
+        Swal.fire('Error', 'Please enter a response', 'error');
+        return;
+    }
+    
+    setSubmitting(true);
+    try {
+        const token = localStorage.getItem('vcart_token');
+        await axios.post(`${API_BASE_URL}${API_ENDPOINTS.tickets.respond(selectedTicket._id)}`, 
+            { response: adminResponse },
+            { headers: { 'x-auth-token': token } }
+        );
+        
+        Swal.fire('Success', 'Response sent and ticket resolved', 'success');
+        setOpenRespondDialog(false);
+        fetchTickets(); // Refresh list
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Failed to send response', 'error');
+    } finally {
+        setSubmitting(false);
+    }
+  };
+
+  const handleViewCustomer = async (userId) => {
+      if (!userId) return;
+      
+      // Try to find user in ticket first if fully populated
+      const ticketUser = tickets.find(t => t.user?._id === userId)?.user;
+      
+      if (ticketUser && ticketUser.email) {
+          setSelectedCustomer(ticketUser);
+          setViewCustomerOpen(true);
+      } else {
+        // Fetch full user details if needed, for now just show what we have or placeholder
+         try {
+             const token = localStorage.getItem('vcart_token');
+             const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.admin.getById(userId)}`, {
+                 headers: { 'x-auth-token': token }
+             });
+             setSelectedCustomer(res.data);
+             setViewCustomerOpen(true);
+         } catch(err) {
+             console.error("Could not fetch user details", err);
+             Swal.fire('Error', 'Could not fetch customer details', 'error');
+         }
+      }
   };
 
   return (
     <Box sx={{ p: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
-            <Typography variant="h4" fontWeight="bold" color="primary.main">
+            <Typography variant="h4" fontWeight="bold" color={theme.palette.text.primary}>
                 Customer Support Tickets
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -220,14 +234,15 @@ const AdminTickets = () => {
             <Card sx={{ 
                 height: '100%', 
                 borderLeft: `6px solid ${item.color}`,
-                boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+                boxShadow: theme.shadows[1],
+                bgcolor: theme.palette.background.paper
             }}>
               <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography variant="caption" color="text.secondary" fontWeight="bold">
                     {item.label}
                   </Typography>
-                  <Typography variant="h4" fontWeight="bold">
+                  <Typography variant="h4" fontWeight="bold" color={theme.palette.text.primary}>
                     {item.count}
                   </Typography>
                 </Box>
@@ -241,7 +256,7 @@ const AdminTickets = () => {
       </Grid>
 
       {/* Filters and Tabs */}
-      <Paper sx={{ mb: 4, borderRadius: 2 }}>
+      <Paper sx={{ mb: 4, borderRadius: 2, bgcolor: theme.palette.background.paper, boxShadow: theme.shadows[1] }}>
         <Tabs 
             value={tabValue} 
             onChange={handleTabChange} 
@@ -278,9 +293,9 @@ const AdminTickets = () => {
       </Paper>
 
       {/* Tickets Table */}
-      <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+      <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2, borderColor: theme.palette.divider, bgcolor: theme.palette.background.paper }}>
         <Table sx={{ minWidth: 650 }}>
-          <TableHead sx={{ bgcolor: 'action.hover' }}>
+          <TableHead sx={{ bgcolor: theme.palette.action.hover }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 'bold' }}>Ticket Info</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Customer</TableCell>
@@ -308,7 +323,7 @@ const AdminTickets = () => {
               filteredTickets.map((ticket) => (
                 <TableRow key={ticket._id} hover>
                   <TableCell>
-                    <Typography variant="subtitle2" fontWeight="bold">#{ticket._id.substring(ticket._id.length - 8).toUpperCase()}</Typography>
+                    <Typography variant="subtitle2" fontWeight="bold" color={theme.palette.text.primary}>#{ticket._id.substring(ticket._id.length - 8).toUpperCase()}</Typography>
                     <Typography variant="caption" color="text.secondary">
                         {new Date(ticket.date).toLocaleDateString()}
                     </Typography>
@@ -327,7 +342,7 @@ const AdminTickets = () => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" color={theme.palette.text.primary} sx={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {ticket.subject}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">{ticket.category}</Typography>
@@ -335,7 +350,7 @@ const AdminTickets = () => {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: getPriorityColor(ticket.priority) }} />
-                        <Typography variant="body2">{ticket.priority}</Typography>
+                        <Typography variant="body2" color={theme.palette.text.primary}>{ticket.priority}</Typography>
                     </Box>
                   </TableCell>
                   <TableCell>{getStatusChip(ticket.status)}</TableCell>
@@ -354,8 +369,8 @@ const AdminTickets = () => {
       </TableContainer>
 
       {/* Response Dialog */}
-      <Dialog open={openRespondDialog} onClose={() => setOpenRespondDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Dialog open={openRespondDialog} onClose={() => setOpenRespondDialog(false)} maxWidth="md" fullWidth PaperProps={{ sx: { bgcolor: theme.palette.background.paper } }}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: theme.palette.text.primary }}>
           Ticket Details
           {selectedTicket && getStatusChip(selectedTicket.status)}
         </DialogTitle>
@@ -364,35 +379,35 @@ const AdminTickets = () => {
           {selectedTicket && (
             <Grid container spacing={3}>
               <Grid item xs={12} md={4}>
-                <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Customer Info</Typography>
+                <Box sx={{ p: 2, bgcolor: theme.palette.action.hover, borderRadius: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom color={theme.palette.text.primary}>Customer Info</Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Person fontSize="small" color="action" />
-                    <Typography variant="body2">{selectedTicket.user?.name}</Typography>
+                    <Typography variant="body2" color={theme.palette.text.primary}>{selectedTicket.user?.name}</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Email fontSize="small" color="action" />
-                    <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>{selectedTicket.user?.email}</Typography>
+                    <Typography variant="body2" color={theme.palette.text.primary} sx={{ wordBreak: 'break-all' }}>{selectedTicket.user?.email}</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <CalendarToday fontSize="small" color="action" />
-                    <Typography variant="body2">{new Date(selectedTicket.date).toLocaleString()}</Typography>
+                    <Typography variant="body2" color={theme.palette.text.primary}>{new Date(selectedTicket.date).toLocaleString()}</Typography>
                   </Box>
                   <Button size="small" variant="outlined" onClick={() => handleViewCustomer(selectedTicket.user?._id)}>View Profile</Button>
                 </Box>
               </Grid>
               <Grid item xs={12} md={8}>
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Issue Subject</Typography>
-                <Typography variant="body1" sx={{ p: 1, bgcolor: '#f9f9f9', borderRadius: 1, mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom color={theme.palette.text.primary}>Issue Subject</Typography>
+                <Typography variant="body1" sx={{ p: 1, bgcolor: theme.palette.action.hover, borderRadius: 1, mb: 2, color: theme.palette.text.primary }}>
                   {selectedTicket.subject}
                 </Typography>
                 
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Customer's Message</Typography>
-                <Box sx={{ p: 2, bgcolor: '#f0f4f8', borderRadius: 2, mb: 3 }}>
-                    <Typography variant="body2">{selectedTicket.message}</Typography>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom color={theme.palette.text.primary}>Customer's Message</Typography>
+                <Box sx={{ p: 2, bgcolor: theme.palette.action.hover, borderRadius: 2, mb: 3 }}>
+                    <Typography variant="body2" color={theme.palette.text.primary}>{selectedTicket.message}</Typography>
                 </Box>
 
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom color={theme.palette.text.primary}>
                     {selectedTicket.status === 'Resolved' ? 'Response History' : 'Your Response'}
                 </Typography>
                 <TextField
@@ -423,6 +438,7 @@ const AdminTickets = () => {
           )}
         </DialogActions>
       </Dialog>
+
 
       {/* Customer Detail View */}
       <UserDetailView 

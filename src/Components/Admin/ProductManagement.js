@@ -1,202 +1,231 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
-  Button,
-  Container,
-  TextField,
-  Grid,
   Box,
   Typography,
+  Button,
+  Card,
+  CardContent,
+  TextField,
+  InputAdornment,
+  TableContainer,
+  Paper,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Avatar,
+  Chip,
+  Tooltip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Divider,
+  DialogActions,
+  Grid,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  FormHelperText,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Tooltip,
-  Chip,
-  Avatar,
-  InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Divider,
-  Stack,
-  Card,
-  CardContent,
-  CircularProgress
-} from "@mui/material";
-import { 
-  Delete, 
-  Edit, 
-  Add, 
-  Search, 
-  Inventory, 
-  CloudUpload,
-  Category,
+  Stack
+} from '@mui/material';
+import {
+  Add,
+  Search,
   FilterList,
-  MoreVert,
   Image as ImageIcon,
-  CheckCircle,
-  Warning
-} from "@mui/icons-material";
-import { Controller, useForm } from "react-hook-form";
-import { useProducts } from "../../context/ProductContext";
+  Category,
+  Edit,
+  Delete,
+  CloudUpload
+} from '@mui/icons-material';
+import axios from 'axios';
+import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
 import Swal from 'sweetalert2';
+import { useForm, Controller } from 'react-hook-form';
 
 const ProductManagement = () => {
-  const { products, categories, addProduct, updateProduct, deleteProduct, loading } = useProducts();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const theme = useTheme();
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Dialog States
   const [openAdd, setOpenAdd] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [currentProduct, setCurrentProduct] = useState(null);
 
-  const {
-    control: controlAdd,
-    handleSubmit: handleSubmitAdd,
-    formState: { errors: errorsAdd },
-    reset: resetAdd,
-    register: registerAdd,
-    setValue: setValueAdd
-  } = useForm({
-    defaultValues: {
-        productname: "",
-        productdescription: "",
-        price: "",
-        stock: 0,
-        category: "",
-        material: "",
-        colors: "",
-        sizes: ""
-    }
+  // Forms
+  const { register: registerAdd, handleSubmit: handleSubmitAdd, control: controlAdd, reset: resetAdd, formState: { errors: errorsAdd, isSubmitting: isSubmittingAdd }, setValue: setValueAdd } = useForm({
+      defaultValues: {
+          productname: '', category: '', productdescription: '', price: '', stock: '', material: '', colors: '', sizes: '', ImageURL: ''
+      }
   });
 
-  const {
-    control: controlEdit,
-    handleSubmit: handleSubmitEdit,
-    formState: { errors: errorsEdit },
-    setValue: setValueEdit,
-    reset: resetEdit,
-    register: registerEdit
-  } = useForm();
+  const { register: registerEdit, handleSubmit: handleSubmitEdit, control: controlEdit, reset: resetEdit, formState: { isSubmitting: isSubmittingEdit }, setValue: setValueEdit } = useForm();
 
-  // Filter products
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => 
-        p.productname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.category?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [products, searchTerm]);
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+  }, []);
 
-  const handleOpenAdd = () => setOpenAdd(true);
-  const handleCloseAdd = () => { resetAdd(); setOpenAdd(false); };
-
-  const handleOpenEdit = (product) => {
-    setSelectedProduct(product);
-    setValueEdit("productname", product.productname);
-    setValueEdit("productdescription", product.productdescription);
-    setValueEdit("price", product.price);
-    setValueEdit("stock", product.stock);
-    setValueEdit("category", product.category);
-    setValueEdit("ImageURL", product.ImageURL);
-    setOpenEdit(true);
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.products.getAll}`);
+      setProducts(res.data);
+    } catch (err) {
+      console.error("Failed to fetch products", err);
+    }
   };
 
-  const handleCloseEdit = () => { setSelectedProduct(null); resetEdit(); setOpenEdit(false); };
+  const fetchCategories = async () => {
+      try {
+          // Assuming a categories endpoint exists, or we extract from products unique values
+          // Ideally use a dedicated endpoint if available
+          const res = await axios.get(`${API_BASE_URL}/api/categories`); 
+          setCategories(res.data);
+      } catch(err) {
+          console.log("Categories fetch failed or endpoint missing, using defaults implies manual entry");
+          // Fallback or ignore
+      }
+  };
+
+  const handleOpenAdd = () => {
+      resetAdd();
+      setOpenAdd(true);
+  };
+
+  const handleCloseAdd = () => setOpenAdd(false);
+
+  const handleOpenEdit = (product) => {
+      setCurrentProduct(product);
+      resetEdit(product); // Reset form with product data
+      setOpenEdit(true);
+  };
+
+  const handleCloseEdit = () => {
+      setOpenEdit(false);
+      setCurrentProduct(null);
+  };
 
   const onAddSubmit = async (data) => {
-    setIsSubmitting(true);
-    try {
-      const formattedData = {
-        ...data,
-        price: Number(data.price),
-        stock: Number(data.stock),
-        colors: typeof data.colors === 'string' ? data.colors.split(',').map(c => c.trim()) : data.colors,
-        sizes: typeof data.sizes === 'string' ? data.sizes.split(',').map(s => s.trim()) : data.sizes
-      };
-      await addProduct(formattedData);
-      Swal.fire('Success', 'Product added successfully', 'success');
-      handleCloseAdd();
-    } catch (err) {
-      Swal.fire('Error', err.message || 'Failed to add product', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
+      try {
+          const token = localStorage.getItem('vcart_token');
+          await axios.post(`${API_BASE_URL}${API_ENDPOINTS.products.add}`, data, {
+              headers: { 'x-auth-token': token }
+          });
+          Swal.fire('Success', 'Product added successfully', 'success');
+          handleCloseAdd();
+          fetchProducts();
+      } catch(err) {
+          Swal.fire('Error', 'Failed to add product', 'error');
+      }
   };
 
   const onEditSubmit = async (data) => {
-    setIsSubmitting(true);
-    try {
-      const updates = {
-          ...data,
-          price: Number(data.price),
-          stock: Number(data.stock)
-      };
-      await updateProduct(selectedProduct._id, updates);
-      Swal.fire('Updated', 'Product updated successfully', 'success');
-      handleCloseEdit();
-    } catch (err) {
-      Swal.fire('Error', err.message || 'Failed to update product', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
+      try {
+          const token = localStorage.getItem('vcart_token');
+          await axios.put(`${API_BASE_URL}${API_ENDPOINTS.products.update(currentProduct._id)}`, data, {
+              headers: { 'x-auth-token': token }
+          });
+          Swal.fire('Success', 'Product updated successfully', 'success');
+          handleCloseEdit();
+          fetchProducts();
+      } catch(err) {
+          Swal.fire('Error', 'Failed to update product', 'error');
+      }
   };
 
   const handleDelete = async (id) => {
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "Product will be permanently deleted!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!'
-    });
+      const result = await Swal.fire({
+          title: 'Are you sure?',
+          text: "You won't be able to revert this!",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          confirmButtonText: 'Yes, delete it!'
+      });
 
-    if (result.isConfirmed) {
-      try {
-        await deleteProduct(id);
-        Swal.fire('Deleted!', 'Product has been removed.', 'success');
-      } catch (err) {
-        Swal.fire('Error', 'Failed to delete product', 'error');
+      if (result.isConfirmed) {
+          try {
+              const token = localStorage.getItem('vcart_token');
+              await axios.delete(`${API_BASE_URL}${API_ENDPOINTS.products.delete(id)}`, {
+                  headers: { 'x-auth-token': token }
+              });
+              Swal.fire('Deleted!', 'Product has been deleted.', 'success');
+              fetchProducts();
+          } catch(err) {
+              Swal.fire('Error', 'Failed to delete product', 'error');
+          }
       }
-    }
   };
 
-  const handleImageUpload = (event, type) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (type === 'add') setValueAdd("ImageURL", reader.result);
-        else setValueEdit("ImageURL", reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageUpload = async (e, mode) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      // Fallback preset
+      formData.append('upload_preset', 'vcart_preset'); 
+
+      try {
+          // Attempting a generic upload to cloudinary if env provided, or alert user
+          // For now, prompt user to use URL or assume backend upload
+          // Since we don't have the config, we'll try a common endpoint or assume URL entry
+          
+          /* 
+            const res = await axios.post('https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload', formData);
+            const url = res.data.secure_url;
+          */
+          
+          Swal.fire({
+              title: 'Image Upload',
+              text: 'Image upload configuration is missing. Please enter image URL manually for now.',
+              icon: 'info'
+          });
+          
+          // If we had the URL:
+          // if (mode === 'add') setValueAdd('ImageURL', url);
+          // else setValueEdit('ImageURL', url);
+
+      } catch(err) {
+          console.error(err);
+          Swal.fire('Error', 'Image upload failed', 'error');
+      }
   };
 
   const getStockChip = (stock) => {
-    if (stock === 0) return <Chip label="Out of Stock" size="small" color="error" variant="outlined" />;
-    if (stock <= 5) return <Chip label={`Low: ${stock}`} size="small" color="warning" variant="outlined" />;
-    return <Chip label={`${stock} In Stock`} size="small" color="success" variant="outlined" />;
+      let color = 'success';
+      let label = 'In Stock';
+      
+      if (stock === 0) {
+          color = 'error';
+          label = 'Out of Stock';
+      } else if (stock < 10) {
+          color = 'warning';
+          label = 'Low Stock';
+      }
+
+      return <Chip label={`${label} (${stock})`} color={color} size="small" variant="outlined" sx={{ fontWeight: 'bold' }} />;
   };
 
-  if (loading && products.length === 0) return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', p: 10 }}><CircularProgress /></Box>
-  );
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return products;
+    const lower = searchTerm.toLowerCase();
+    return products.filter(p => 
+        p.productname.toLowerCase().includes(lower) || 
+        p.category?.toLowerCase().includes(lower)
+    );
+  }, [products, searchTerm]);
 
   return (
     <Box sx={{ p: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
-            <Typography variant="h4" fontWeight="bold">Product Inventory</Typography>
+            <Typography variant="h4" fontWeight="bold" color={theme.palette.text.primary}>Product Inventory</Typography>
             <Typography variant="body2" color="text.secondary">Manage your store's catalog and stock levels.</Typography>
         </Box>
         <Button variant="contained" startIcon={<Add />} onClick={handleOpenAdd} sx={{ borderRadius: 2, px: 3 }}>
@@ -205,7 +234,7 @@ const ProductManagement = () => {
       </Box>
 
       {/* Filters */}
-      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: theme.shadows[1], bgcolor: theme.palette.background.paper }}>
         <CardContent sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
             placeholder="Search products by name or category..."
@@ -227,10 +256,10 @@ const ProductManagement = () => {
       </Card>
 
       {/* Table */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee', borderRadius: 3 }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
         <Table>
-          <TableHead sx={{ bgcolor: '#fbfbfb' }}>
-            <TableRow>
+          <TableHead>
+            <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
               <TableCell sx={{ fontWeight: 'bold' }}>Product</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Category</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Price</TableCell>
@@ -243,11 +272,11 @@ const ProductManagement = () => {
               <TableRow key={p._id} hover>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar variant="rounded" src={p.ImageURL} sx={{ width: 48, height: 48, bgcolor: 'action.hover' }}>
+                    <Avatar variant="rounded" src={p.ImageURL} sx={{ width: 48, height: 48, bgcolor: theme.palette.action.hover }}>
                         <ImageIcon color="action" />
                     </Avatar>
                     <Box>
-                        <Typography variant="body2" fontWeight="bold">{p.productname}</Typography>
+                        <Typography variant="body2" fontWeight="bold" color={theme.palette.text.primary}>{p.productname}</Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 200, noWrap: true, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {p.productdescription}
                         </Typography>
@@ -258,7 +287,7 @@ const ProductManagement = () => {
                     <Chip label={p.category || 'Uncategorized'} size="small" variant="outlined" icon={<Category sx={{ fontSize: '0.8rem !important' }} />} />
                 </TableCell>
                 <TableCell>
-                    <Typography variant="subtitle2" fontWeight="bold">₹{p.price}</Typography>
+                    <Typography variant="subtitle2" fontWeight="bold" color={theme.palette.text.primary}>₹{p.price}</Typography>
                 </TableCell>
                 <TableCell>
                     {getStockChip(p.stock)}
@@ -284,11 +313,11 @@ const ProductManagement = () => {
       </TableContainer>
 
       {/* Add Dialog */}
-      <Dialog open={openAdd} onClose={handleCloseAdd} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 'bold' }}>Add New Product</DialogTitle>
+      <Dialog open={openAdd} onClose={handleCloseAdd} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3, bgcolor: theme.palette.background.paper } }}>
+        <DialogTitle sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Add New Product</DialogTitle>
         <Divider />
         <DialogContent sx={{ p: 4 }}>
-          <form onSubmit={handleSubmitAdd(onAddSubmit)}>
+          <form onSubmit={handleSubmitAdd(onAddSubmit)} id="add-form">
             <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                     <Controller
@@ -341,7 +370,7 @@ const ProductManagement = () => {
                     <TextField label="Sizes (comma separated)" fullWidth {...registerAdd("sizes")} placeholder="S, M, L, XL" />
                 </Grid>
                 <Grid item xs={12}>
-                    <Box sx={{ border: '2px dashed #eee', p: 3, textAlign: 'center', borderRadius: 2 }}>
+                    <Box sx={{ border: `2px dashed ${theme.palette.divider}`, p: 3, textAlign: 'center', borderRadius: 2 }}>
                         <input accept="image/*" type="file" id="add-img" style={{ display: 'none' }} onChange={(e) => handleImageUpload(e, 'add')} />
                         <label htmlFor="add-img">
                             <Button component="span" startIcon={<CloudUpload />} sx={{ mb: 1 }}>Upload Product Image</Button>
@@ -350,27 +379,27 @@ const ProductManagement = () => {
                         <Controller
                             name="ImageURL"
                             control={controlAdd}
-                            render={({ field }) => field.value ? <Box sx={{ mt: 2 }}><img src={field.value} alt="Preview" style={{ width: 100, height: 100, borderRadius: 8, objectFit: 'cover' }} /></Box> : null}
+                            render={({ field }) => field.value ? <Box sx={{ mt: 2 }}><img src={field.value} alt="Preview" style={{ width: 100, height: 100, borderRadius: 8, objectFit: 'cover' }} /></Box> : <TextField {...field} label="Or enter Image URL" fullWidth sx={{mt: 2}} size="small"/>}
                         />
                     </Box>
                 </Grid>
             </Grid>
           </form>
         </DialogContent>
-        <DialogActions sx={{ p: 3, bgcolor: '#fbfbfb' }}>
+        <DialogActions sx={{ p: 3, bgcolor: theme.palette.action.hover }}>
             <Button onClick={handleCloseAdd}>Cancel</Button>
-            <Button variant="contained" onClick={handleSubmitAdd(onAddSubmit)} disabled={isSubmitting}>
-                {isSubmitting ? "Processing..." : "Create Product"}
+            <Button variant="contained" type="submit" form="add-form" disabled={isSubmittingAdd}>
+                {isSubmittingAdd ? "Processing..." : "Create Product"}
             </Button>
         </DialogActions>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={openEdit} onClose={handleCloseEdit} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+      <Dialog open={openEdit} onClose={handleCloseEdit} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, bgcolor: theme.palette.background.paper } }}>
         <DialogTitle sx={{ fontWeight: 'bold' }}>Edit Product</DialogTitle>
         <Divider />
         <DialogContent sx={{ p: 4 }}>
-            <form onSubmit={handleSubmitEdit(onEditSubmit)}>
+            <form onSubmit={handleSubmitEdit(onEditSubmit)} id="edit-form">
                 <Stack spacing={3}>
                     <TextField label="Product Name" fullWidth {...registerEdit("productname", { required: true })} />
                     <TextField label="Description" fullWidth multiline rows={3} {...registerEdit("productdescription", { required: true })} />
@@ -390,16 +419,21 @@ const ProductManagement = () => {
                             )}
                         />
                     </FormControl>
-                    <Box sx={{ border: '1px solid #eee', p: 2, borderRadius: 2 }}>
+                    <Box sx={{ border: `1px solid ${theme.palette.divider}`, p: 2, borderRadius: 2 }}>
                         <Typography variant="caption" display="block" gutterBottom>Change Product Image</Typography>
                         <input accept="image/*" type="file" onChange={(e) => handleImageUpload(e, 'edit')} />
+                        <Controller
+                            name="ImageURL"
+                            control={controlEdit}
+                            render={({ field }) => field.value && <img src={field.value} alt="Preview" style={{ width: '100%', marginTop: 8, borderRadius: 4 }} />}
+                        />
                     </Box>
                 </Stack>
             </form>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
             <Button onClick={handleCloseEdit}>Cancel</Button>
-            <Button variant="contained" onClick={handleSubmitEdit(onEditSubmit)} disabled={isSubmitting}>Save Changes</Button>
+            <Button variant="contained" type="submit" form="edit-form" disabled={isSubmittingEdit}>Save Changes</Button>
         </DialogActions>
       </Dialog>
     </Box>
@@ -407,4 +441,3 @@ const ProductManagement = () => {
 };
 
 export default ProductManagement;
-
