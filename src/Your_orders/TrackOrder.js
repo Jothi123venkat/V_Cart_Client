@@ -20,19 +20,30 @@ import {
   Inventory, 
   CheckCircle, 
   Cancel as CancelIcon,
-  Schedule
+  Schedule,
+  AssignmentReturn
 } from '@mui/icons-material';
 
 const TrackOrder = ({ open, onClose, order }) => {
   if (!order) return null;
 
   const steps = ['Processing', 'Shipped', 'Delivered'];
+  const returnStatuses = ['Return Requested', 'Returned', 'Return Rejected'];
+  
+  if (returnStatuses.includes(order.status)) {
+    steps.push('Return Requested');
+    if (order.status === 'Returned') steps.push('Returned');
+    if (order.status === 'Return Rejected') steps.push('Return Rejected');
+  }
   
   const getActiveStep = (status) => {
     switch (status) {
       case 'Processing': return 0;
       case 'Shipped': return 1;
       case 'Delivered': return 2;
+      case 'Return Requested': return 3;
+      case 'Returned': 
+      case 'Return Rejected': return 4;
       case 'Cancelled': return -1;
       default: return 0;
     }
@@ -41,7 +52,10 @@ const TrackOrder = ({ open, onClose, order }) => {
   const activeStep = getActiveStep(order.status);
   const isCancelled = order.status === 'Cancelled';
 
-  const getStepIcon = (index) => {
+  const getStepIcon = (index, label) => {
+    if (label === 'Return Requested' || label === 'Returned' || label === 'Return Rejected') {
+        return <AssignmentReturn />;
+    }
     switch (index) {
       case 0: return <Inventory />;
       case 1: return <LocalShipping />;
@@ -74,12 +88,13 @@ const TrackOrder = ({ open, onClose, order }) => {
               {steps.map((label, index) => (
                 <Step key={label}>
                   <StepLabel 
+                    error={label === 'Return Rejected'}
                     StepIconComponent={() => (
                         <Box sx={{ 
-                            color: activeStep >= index ? 'primary.main' : 'grey.400',
+                            color: label === 'Return Rejected' ? 'error.main' : (activeStep >= index ? 'primary.main' : 'grey.400'),
                             display: 'flex'
                         }}>
-                            {getStepIcon(index)}
+                            {getStepIcon(index, label)}
                         </Box>
                     )}
                   >
@@ -90,6 +105,17 @@ const TrackOrder = ({ open, onClose, order }) => {
             </Stepper>
 
             <Paper variant="outlined" sx={{ p: 3, bgcolor: '#f8f9fa', borderRadius: 2 }}>
+              {order.status === 'Return Rejected' && (
+                  <Box sx={{ mb: 2, p: 2, bgcolor: 'error.lighter', border: '1px solid', borderColor: 'error.main', borderRadius: 1 }}>
+                      <Typography variant="body2" color="error" fontWeight="bold">
+                          Return Request Rejected
+                      </Typography>
+                      <Typography variant="caption" color="error">
+                          Your request was not approved by our quality team.
+                      </Typography>
+                  </Box>
+              )}
+
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <Schedule color="primary" fontSize="small" />
                 <Typography variant="subtitle2" fontWeight="bold">Status Update</Typography>
@@ -98,8 +124,13 @@ const TrackOrder = ({ open, onClose, order }) => {
               <Typography variant="body2" gutterBottom>
                 <strong>Current Status:</strong> {order.status}
               </Typography>
+              {order.returnReason && (
+                <Typography variant="body2" gutterBottom>
+                  <strong>Return Reason:</strong> {order.returnReason}
+                </Typography>
+              )}
               <Typography variant="body2" gutterBottom>
-                <strong>Estimated Delivery:</strong> {order.status === 'Delivered' ? 'Delivered' : 'Pending'}
+                <strong>Estimated Delivery:</strong> {steps.includes(order.status) && activeStep >= 2 ? 'Delivered' : 'Pending'}
               </Typography>
               
               <Divider sx={{ my: 2 }} />

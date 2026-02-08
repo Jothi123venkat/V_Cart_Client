@@ -2,28 +2,36 @@ import React from 'react';
 import { Box, Container, Grid, Typography, Card, CardMedia, useTheme } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
-const collections = [
-    {
-        title: "Embroidery Threads",
-        image: "https://images.unsplash.com/photo-1615526675159-e248c3021d3f?q=80&w=2000&auto=format&fit=crop",
-        link: "/products?category=Threads"
-    },
-    {
-        title: "Silk & Satin Linings",
-        image: "https://images.unsplash.com/photo-1548142723-aae7678afa53?q=80&w=2000&auto=format&fit=crop",
-        link: "/products?category=Linings"
-    },
-    {
-        title: "Tailoring Tools",
-        image: "https://images.unsplash.com/photo-1598300056393-8dd1a56113b2?q=80&w=2000&auto=format&fit=crop",
-        link: "/products?category=Accessories"
-    }
-];
+import { useSiteConfig } from '../../context/SiteConfigContext';
 
 const FeaturedCollections = () => {
     const navigate = useNavigate();
     const theme = useTheme();
     const isLight = theme.palette.mode === 'light';
+    const { siteConfig } = useSiteConfig();
+
+    const collections = siteConfig?.curatedCollections?.items?.length > 0 
+        ? siteConfig.curatedCollections.items 
+        : [
+            {
+                title: "Embroidery Threads",
+                image: "https://images.unsplash.com/photo-1615526675159-e248c3021d3f?q=80&w=2000&auto=format&fit=crop",
+                link: "/products?category=Threads"
+            },
+            {
+                title: "Silk & Satin Linings",
+                image: "https://images.unsplash.com/photo-1548142723-aae7678afa53?q=80&w=2000&auto=format&fit=crop",
+                link: "/products?category=Linings"
+            },
+            {
+                title: "Tailoring Tools",
+                image: "https://images.unsplash.com/photo-1598300056393-8dd1a56113b2?q=80&w=2000&auto=format&fit=crop",
+                link: "/products?category=Accessories"
+            }
+        ];
+
+    const sectionTitle = siteConfig?.curatedCollections?.title || "The Collection";
+    const sectionSubtitle = siteConfig?.curatedCollections?.subtitle || "CURATED SELECTION";
 
     return (
         <Box 
@@ -45,7 +53,7 @@ const FeaturedCollections = () => {
                             mb: 1
                         }}
                     >
-                        CURATED SELECTION
+                        {sectionSubtitle}
                     </Typography>
                     <Typography 
                         variant="h3" 
@@ -56,7 +64,7 @@ const FeaturedCollections = () => {
                             color: theme.palette.text.primary,
                         }}
                     >
-                        The Collection
+                        {sectionTitle}
                     </Typography>
                 </Box>
                 <Grid container spacing={4}>

@@ -88,7 +88,7 @@ const OrderManagement = () => {
 
   const stats = useMemo(() => {
     return {
-      total: orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+      total: orders.reduce((sum, order) => sum + (order.total || 0), 0),
       pending: orders.filter(o => o.status === 'Pending').length,
       delivered: orders.filter(o => o.status === 'Delivered').length,
       count: orders.length
@@ -103,6 +103,7 @@ const OrderManagement = () => {
     if (tabValue === 2) filtered = filtered.filter(o => o.status === 'Shipped');
     if (tabValue === 3) filtered = filtered.filter(o => o.status === 'Delivered');
     if (tabValue === 4) filtered = filtered.filter(o => o.status === 'Cancelled');
+    if (tabValue === 5) filtered = filtered.filter(o => o.status === 'Return Requested' || o.status === 'Returned' || o.status === 'Return Rejected');
 
     // Filter by Search
     if (searchTerm) {
@@ -130,6 +131,9 @@ const OrderManagement = () => {
         case 'Shipped': color = 'primary'; break;
         case 'Delivered': color = 'success'; break;
         case 'Cancelled': color = 'error'; break;
+        case 'Return Requested': color = 'secondary'; break;
+        case 'Returned': color = 'primary'; break;
+        case 'Return Rejected': color = 'error'; break;
         default: break;
     }
     return <Chip label={status} color={color} size="small" variant="outlined" sx={{ fontWeight: 'bold' }} />;
@@ -251,6 +255,7 @@ const OrderManagement = () => {
           <Tab label="Shipped" />
           <Tab label="Delivered" />
           <Tab label="Cancelled" />
+          <Tab label="Returns" />
         </Tabs>
         
         <Box sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -323,15 +328,15 @@ const OrderManagement = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color={theme.palette.text.primary}>
-                        {new Date(order.createdAt).toLocaleDateString()}
+                        {new Date(order.date).toLocaleDateString()}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                        {new Date(order.createdAt).toLocaleTimeString()}
+                        {new Date(order.date).toLocaleTimeString()}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="subtitle2" fontWeight="bold" color={theme.palette.text.primary}>
-                        {formatCurrency(order.totalAmount)}
+                        {formatCurrency(order.total)}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                         {order.items?.length || 0} items
@@ -398,12 +403,12 @@ const OrderManagement = () => {
                          <Stack spacing={1}>
                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                  <Typography variant="body2">Subtotal</Typography>
-                                 <Typography variant="body2" fontWeight="bold">{formatCurrency(selectedOrder.totalAmount)}</Typography>
+                                 <Typography variant="body2" fontWeight="bold">{formatCurrency(selectedOrder.total)}</Typography>
                              </Box>
                              <Divider />
                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                  <Typography variant="h6" fontWeight="bold">Total Amount</Typography>
-                                 <Typography variant="h6" fontWeight="bold" color="primary.main">{formatCurrency(selectedOrder.totalAmount)}</Typography>
+                                 <Typography variant="h6" fontWeight="bold" color="primary.main">{formatCurrency(selectedOrder.total)}</Typography>
                              </Box>
                          </Stack>
                     </Box>
@@ -450,6 +455,9 @@ const OrderManagement = () => {
                                 <MenuItem value="Processing">Processing</MenuItem>
                                 <MenuItem value="Shipped">Shipped</MenuItem>
                                 <MenuItem value="Delivered">Delivered</MenuItem>
+                                <MenuItem value="Return Requested">Return Requested</MenuItem>
+                                <MenuItem value="Returned">Returned</MenuItem>
+                                <MenuItem value="Return Rejected">Return Rejected</MenuItem>
                                 <MenuItem value="Cancelled">Cancelled</MenuItem>
                             </Select>
                         </FormControl>

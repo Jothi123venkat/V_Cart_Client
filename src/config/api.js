@@ -52,9 +52,16 @@ export const API_ENDPOINTS = {
   },
   tickets: {
     base: '/api/tickets',
-    mine: '/api/tickets/my',
-    admin: '/api/tickets/admin',
+    mine: '/api/tickets/my', // Keeping for legacy reference if needed
+    create: '/api/tickets',
+    admin: '/api/tickets/admin', // Updated to match likely route or keep as base
     respond: (id) => `/api/tickets/${id}/respond`
+  },
+  invoices: {
+    base: '/api/invoices',
+    create: '/api/invoices/create',
+    getById: (id) => `/api/invoices/${id}`,
+    generate: (orderId) => `/api/invoices/generate/${orderId}`
   }
 };
 

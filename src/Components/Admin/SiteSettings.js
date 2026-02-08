@@ -24,7 +24,31 @@ const SiteSettings = () => {
         heroImage: '',
         contactEmail: '',
         contactPhone: '',
-        footerText: ''
+        footerText: '',
+        curatedCollections: {
+            title: '',
+            subtitle: '',
+            items: []
+        },
+        flashSale: {
+            title: '',
+            subtitle: '',
+            isActive: true
+        },
+        invoiceSettings: {
+            gstin: '',
+            taxRate: 18,
+            termsAndConditions: '',
+            startInvoiceNumber: 1,
+            prefix: 'INV',
+            address: '',
+            bankDetails: {
+                bankName: '',
+                accountNo: '',
+                ifscCode: '',
+                branch: ''
+            }
+        }
     });
     const [message, setMessage] = useState(null);
     const [saving, setSaving] = useState(false);
@@ -40,13 +64,64 @@ const SiteSettings = () => {
                 heroImage: siteConfig.heroImage || '',
                 contactEmail: siteConfig.contactEmail || '',
                 contactPhone: siteConfig.contactPhone || '',
-                footerText: siteConfig.footerText || ''
+                footerText: siteConfig.footerText || '',
+                curatedCollections: {
+                    title: siteConfig.curatedCollections?.title || 'The Collection',
+                    subtitle: siteConfig.curatedCollections?.subtitle || 'CURATED SELECTION',
+                    items: siteConfig.curatedCollections?.items?.length > 0 ? siteConfig.curatedCollections.items : [
+                         { title: "Embroidery Threads", image: "https://images.unsplash.com/photo-1615526675159-e248c3021d3f?q=80&w=2000&auto=format&fit=crop", link: "/products?category=Threads" },
+                         { title: "Silk & Satin Linings", image: "https://images.unsplash.com/photo-1548142723-aae7678afa53?q=80&w=2000&auto=format&fit=crop", link: "/products?category=Linings" },
+                         { title: "Tailoring Tools", image: "https://images.unsplash.com/photo-1598300056393-8dd1a56113b2?q=80&w=2000&auto=format&fit=crop", link: "/products?category=Accessories" }
+                    ]
+                },
+                flashSale: {
+                    title: siteConfig.flashSale?.title || "Don't Miss Out!",
+                    subtitle: siteConfig.flashSale?.subtitle || "Limited time offers - Grab them before they're gone!",
+                    isActive: siteConfig.flashSale?.isActive !== undefined ? siteConfig.flashSale.isActive : true
+                },
+                invoiceSettings: {
+                    gstin: siteConfig.invoiceSettings?.gstin || '',
+                    taxRate: siteConfig.invoiceSettings?.taxRate || 18,
+                    termsAndConditions: siteConfig.invoiceSettings?.termsAndConditions || '',
+                    startInvoiceNumber: siteConfig.invoiceSettings?.startInvoiceNumber || 1,
+                    prefix: siteConfig.invoiceSettings?.prefix || 'INV',
+                    address: siteConfig.invoiceSettings?.address || '',
+                    bankDetails: {
+                        bankName: siteConfig.invoiceSettings?.bankDetails?.bankName || '',
+                        accountNo: siteConfig.invoiceSettings?.bankDetails?.accountNo || '',
+                        ifscCode: siteConfig.invoiceSettings?.bankDetails?.ifscCode || '',
+                        branch: siteConfig.invoiceSettings?.bankDetails?.branch || ''
+                    }
+                }
             });
         }
     }, [siteConfig]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleCollectionChange = (index, field, value) => {
+        const newItems = [...formData.curatedCollections.items];
+        newItems[index] = { ...newItems[index], [field]: value };
+        setFormData({
+            ...formData,
+            curatedCollections: { ...formData.curatedCollections, items: newItems }
+        });
+    };
+
+    const handleCollectionHeaderChange = (e) => {
+        setFormData({
+            ...formData,
+            curatedCollections: { ...formData.curatedCollections, [e.target.name]: e.target.value }
+        });
+    };
+
+    const handleFlashSaleChange = (e) => {
+         setFormData({
+            ...formData,
+            flashSale: { ...formData.flashSale, [e.target.name]: e.target.value }
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -152,6 +227,238 @@ const SiteSettings = () => {
                                 value={formData.heroImage}
                                 onChange={handleChange}
                                 placeholder="https://..."
+                            />
+                        </Grid>
+
+                        {/* Curated Collections Section */}
+                        <Grid item xs={12}>
+                            <Typography variant="h6" sx={{ mt: 2, mb: 2, color: 'primary.main' }}>Curated Selection</Typography>
+                            <Divider sx={{ mb: 2 }} />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                             <TextField
+                                fullWidth
+                                label="Section Subtitle (e.g., Curated Selection)"
+                                name="subtitle"
+                                value={formData.curatedCollections.subtitle}
+                                onChange={handleCollectionHeaderChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                             <TextField
+                                fullWidth
+                                label="Section Title (e.g., The Collection)"
+                                name="title"
+                                value={formData.curatedCollections.title}
+                                onChange={handleCollectionHeaderChange}
+                            />
+                        </Grid>
+                        
+                        {formData.curatedCollections.items.map((item, index) => (
+                            <React.Fragment key={index}>
+                                <Grid item xs={12}>
+                                    <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Collection Item {index + 1}</Typography>
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Title"
+                                        value={item.title}
+                                        onChange={(e) => handleCollectionChange(index, 'title', e.target.value)}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Image URL"
+                                        value={item.image}
+                                        onChange={(e) => handleCollectionChange(index, 'image', e.target.value)}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Link Path"
+                                        value={item.link}
+                                        onChange={(e) => handleCollectionChange(index, 'link', e.target.value)}
+                                    />
+                                </Grid>
+                            </React.Fragment>
+                        ))}
+
+                        {/* Invoice Configuration */}
+                        <Grid item xs={12}>
+                            <Typography variant="h6" sx={{ mt: 2, mb: 2, color: 'primary.main' }}>Invoice Settings</Typography>
+                            <Divider sx={{ mb: 2 }} />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="GSTIN"
+                                name="invoiceSettings.gstin"
+                                value={formData.invoiceSettings.gstin}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { ...formData.invoiceSettings, gstin: e.target.value }
+                                })}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Default Tax Rate (%)"
+                                type="number"
+                                name="invoiceSettings.taxRate"
+                                value={formData.invoiceSettings.taxRate}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { ...formData.invoiceSettings, taxRate: Number(e.target.value) }
+                                })}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Invoice Prefix"
+                                name="invoiceSettings.prefix"
+                                value={formData.invoiceSettings.prefix}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { ...formData.invoiceSettings, prefix: e.target.value }
+                                })}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Start Invoice Number"
+                                type="number"
+                                name="invoiceSettings.startInvoiceNumber"
+                                value={formData.invoiceSettings.startInvoiceNumber}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { ...formData.invoiceSettings, startInvoiceNumber: Number(e.target.value) }
+                                })}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                label="Store Address for Invoice"
+                                multiline
+                                rows={3}
+                                name="invoiceSettings.address"
+                                value={formData.invoiceSettings.address}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { ...formData.invoiceSettings, address: e.target.value }
+                                })}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                label="Terms & Conditions"
+                                multiline
+                                rows={4}
+                                name="invoiceSettings.termsAndConditions"
+                                value={formData.invoiceSettings.termsAndConditions}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { ...formData.invoiceSettings, termsAndConditions: e.target.value }
+                                })}
+                            />
+                        </Grid>
+                        
+                        {/* Bank Details */}
+                        <Grid item xs={12}>
+                             <Typography variant="subtitle2" sx={{ mt: 1, mb: 1, color: 'text.secondary' }}>Bank Details (Printed on Invoice)</Typography>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Bank Name"
+                                value={formData.invoiceSettings.bankDetails.bankName}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { 
+                                        ...formData.invoiceSettings, 
+                                        bankDetails: { ...formData.invoiceSettings.bankDetails, bankName: e.target.value } 
+                                    }
+                                })}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Account Number"
+                                value={formData.invoiceSettings.bankDetails.accountNo}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { 
+                                        ...formData.invoiceSettings, 
+                                        bankDetails: { ...formData.invoiceSettings.bankDetails, accountNo: e.target.value } 
+                                    }
+                                })}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="IFSC Code"
+                                value={formData.invoiceSettings.bankDetails.ifscCode}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { 
+                                        ...formData.invoiceSettings, 
+                                        bankDetails: { ...formData.invoiceSettings.bankDetails, ifscCode: e.target.value } 
+                                    }
+                                })}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Branch"
+                                value={formData.invoiceSettings.bankDetails.branch}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    invoiceSettings: { 
+                                        ...formData.invoiceSettings, 
+                                        bankDetails: { ...formData.invoiceSettings.bankDetails, branch: e.target.value } 
+                                    }
+                                })}
+                            />
+                        </Grid>
+
+                        {/* Flash Sales Section */}
+                        <Grid item xs={12}>
+                             <Typography variant="h6" sx={{ mt: 2, mb: 2, color: 'primary.main' }}>Flash Sales Configuration</Typography>
+                             <Divider sx={{ mb: 2 }} />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                             <TextField
+                                fullWidth
+                                label="Flash Sale Title"
+                                name="title"
+                                value={formData.flashSale.title}
+                                onChange={handleFlashSaleChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                             <TextField
+                                fullWidth
+                                label="Flash Sale Subtitle"
+                                name="subtitle"
+                                value={formData.flashSale.subtitle}
+                                onChange={handleFlashSaleChange}
                             />
                         </Grid>
 

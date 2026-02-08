@@ -34,7 +34,8 @@ import {
   Category,
   Support,
   Notifications,
-  Circle
+  Circle,
+  AssignmentReturn
 } from '@mui/icons-material';
 import { useAdmin } from '../../context/AdminContext';
 import axios from 'axios';
@@ -56,10 +57,13 @@ const formatRelativeTime = (date) => {
 
 const menuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/admin/dashboard' },
+  { text: 'Invoices', icon: <Assessment />, path: '/admin/invoices' },
+  { text: 'Create Invoice', icon: <Assessment />, path: '/admin/invoices/create' },
   { text: 'Products', icon: <Inventory />, path: '/admin/products' },
   { text: 'Inventory', icon: <Assessment />, path: '/admin/inventory' },
   { text: 'Categories', icon: <Category />, path: '/admin/categories' },
   { text: 'Orders', icon: <ShoppingCart />, path: '/admin/orders' },
+  { text: 'Returning Orders', icon: <AssignmentReturn />, path: '/admin/returns' },
   { text: 'Users', icon: <People />, path: '/admin/users' },
   { text: 'Promotions', icon: <LocalOffer />, path: '/admin/promotions' },
   { text: 'Analytics', icon: <Assessment />, path: '/admin/analytics' },

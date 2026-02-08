@@ -4,7 +4,7 @@ import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import { Container, Box, Chip } from '@mui/material';
+import { Container, Box, Chip, Alert } from '@mui/material';
 import { ShoppingCart, CheckCircle, LocalShipping, Cancel } from '@mui/icons-material';
 import Swal from 'sweetalert2';
 import axios from 'axios';
@@ -31,13 +31,64 @@ const Orders = () => {
             const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.orders.mine}`, {
                 headers: { 'x-auth-token': token }
             });
-            setOrders(res.data);
+            const fetchedOrders = res.data;
+            setOrders(fetchedOrders);
+            
+            // Trigger review popup for the most recent unreviewed delivered item
+            const unreviewedItem = fetchedOrders
+                .filter(o => o.status === 'Delivered')
+                .flatMap(o => o.items.map(i => ({...i, orderId: o._id})))
+                .find(i => !i.isReviewed);
+            
+            if (unreviewedItem) {
+                Swal.fire({
+                    title: 'How was your purchase?',
+                    text: `We noticed you haven't reviewed ${unreviewedItem.productname} yet. Would you like to share your thoughts?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Review Now',
+                    cancelButtonText: 'Later'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = `/product/${unreviewedItem.productId}?orderId=${unreviewedItem.orderId}`;
+                    }
+                });
+            }
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
         }
     }
+
+    const handleReturnOrder = (id) => {
+        Swal.fire({
+            title: 'Return Order',
+            text: 'Please provide a reason for the return:',
+            input: 'textarea',
+            inputPlaceholder: 'Reason for return...',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Submit Return Request'
+        }).then(async (result) => {
+            if (result.isConfirmed && result.value) {
+                try {
+                    const token = localStorage.getItem('vcart_token');
+                    await axios.put(`${API_BASE_URL}/api/orders/${id}/return`, 
+                        { reason: result.value },
+                        { headers: { 'x-auth-token': token } }
+                    );
+                    Swal.fire('Success!', 'Your return request has been submitted.', 'success');
+                    loadOrders();
+                } catch (err) {
+                    Swal.fire('Error!', err.response?.data?.msg || 'Failed to submit return request.', 'error');
+                }
+            } else if (result.isConfirmed && !result.value) {
+                Swal.fire('Error!', 'A reason is required to submit a return request.', 'error');
+            }
+        });
+    };
 
     const CancelOrder = (id) => {
       Swal.fire({
@@ -76,7 +127,10 @@ const Orders = () => {
       'Processing': <ShoppingCart />,
       'Shipped': <LocalShipping />,
       'Delivered': <CheckCircle />,
-      'Cancelled': <Cancel />
+      'Cancelled': <Cancel />,
+      'Return Requested': <LocalShipping />,
+      'Returned': <CheckCircle />,
+      'Return Rejected': <Cancel />
     };
     return icons[status] || <ShoppingCart />;
   };
@@ -172,12 +226,25 @@ const Orders = () => {
                         <Chip 
                             icon={getStatusIcon(order.status)}
                             label={order.status} 
-                            color={order.status === 'Processing' ? 'warning' : order.status === 'Delivered' ? 'success' : order.status === 'Shipped' ? 'info' : 'error'}
+                            color={
+                                order.status === 'Processing' ? 'warning' : 
+                                order.status === 'Delivered' ? 'success' : 
+                                order.status === 'Shipped' ? 'info' : 
+                                order.status === 'Return Requested' ? 'secondary' :
+                                order.status === 'Returned' ? 'primary' :
+                                'error'
+                            }
                         />
                     </Box>
-                    <Typography variant="body2" color="text.secondary" className="mb-3">
+                    <Typography variant="body2" color="text.secondary" className="mb-2">
                         Placed on: {new Date(order.date).toLocaleString()}
                     </Typography>
+                    
+                    {order.status === 'Return Rejected' && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            Your return request was rejected by our quality team.
+                        </Alert>
+                    )}
                     
                     {order.items.map((val) => (
                         <div key={val._id} className="d-flex mb-3 align-items-center gap-3 border-bottom pb-2">
@@ -205,7 +272,11 @@ const Orders = () => {
                             <Button size="small" variant='contained' onClick={() => handleTrackClick(order)}>Track Order</Button>
                             <Button size="small" variant='outlined' color="primary" onClick={() => handleDownloadInvoice(order)}>Invoice</Button>
                             <Button size="small" variant='outlined' color="primary" onClick={() => handleSupportClick(order._id)}>Support</Button>
-                            <Button size="small" variant='outlined' color="error" onClick={()=>CancelOrder(order._id)}>Cancel Order</Button>
+                            {order.status === 'Delivered' ? (
+                                <Button size="small" variant='contained' color="warning" onClick={() => handleReturnOrder(order._id)}>Return Order</Button>
+                            ) : order.status !== 'Cancelled' && order.status !== 'Returned' && order.status !== 'Return Requested' && order.status !== 'Return Rejected' ? (
+                                <Button size="small" variant='outlined' color="error" onClick={()=>CancelOrder(order._id)}>Cancel Order</Button>
+                            ) : null}
                         </div>
                     </div>
                 </Card>

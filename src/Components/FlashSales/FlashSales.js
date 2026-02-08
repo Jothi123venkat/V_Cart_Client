@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useProducts } from '../../context/ProductContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useSiteConfig } from '../../context/SiteConfigContext';
 
 const FlashSales = () => {
   const navigate = useNavigate();
@@ -25,8 +26,13 @@ const FlashSales = () => {
   const { products } = useProducts();
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
+  const { siteConfig } = useSiteConfig();
   const [timeLeft, setTimeLeft] = useState(3600); // 1 hour countdown
   const isLight = theme.palette.mode === 'light';
+
+  const flashSaleTitle = siteConfig?.flashSale?.title || "Don't Miss Out!";
+  const flashSaleSubtitle = siteConfig?.flashSale?.subtitle || "Limited time offers - Grab them before they're gone!";
+  const isFlashSaleActive = siteConfig?.flashSale?.isActive !== undefined ? siteConfig.flashSale.isActive : true;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -59,7 +65,7 @@ const FlashSales = () => {
     navigate('/checkout', { state: { items: [{ product, quantity: 1 }], isBuyNow: true } });
   };
 
-  if (flashSaleProducts.length === 0) return null;
+  if (flashSaleProducts.length === 0 || !isFlashSaleActive) return null;
 
   return (
     <Box
@@ -112,7 +118,7 @@ const FlashSales = () => {
                 textShadow: '0 4px 20px rgba(0,0,0,0.3)',
               }}
             >
-              Don't Miss Out!
+              {flashSaleTitle}
             </Typography>
             <FlashOn sx={{ fontSize: 32, color: '#FFD700' }} />
           </Box>
@@ -125,7 +131,7 @@ const FlashSales = () => {
               fontWeight: 400,
             }}
           >
-            Limited time offers - Grab them before they're gone!
+            {flashSaleSubtitle}
           </Typography>
 
           {/* Countdown Timer */}

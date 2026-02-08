@@ -30,7 +30,11 @@ import AdminTickets from './Components/Admin/AdminTickets'
 import SupportPage from './Components/Support/SupportPage';
 import InventoryManagement from './Components/Admin/InventoryManagement'
 import SiteSettings from './Components/Admin/SiteSettings';
+import ReturnManagement from './Components/Admin/ReturnManagement';
 import Footer from './Components/Footer/Footer';
+import InvoiceList from './Components/Admin/InvoiceList';
+import CreateInvoice from './Components/Admin/CreateInvoice';
+import ConfigureInvoice from './Components/Admin/ConfigureInvoice';
 
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -115,7 +119,11 @@ const AppContent = () => {
           <Route path="users" element={<UserManagement />} />
           <Route path="support" element={<AdminTickets />} />
           <Route path="inventory" element={<InventoryManagement />} />
+          <Route path="returns" element={<ReturnManagement />} />
           <Route path="settings" element={<SiteSettings />} />
+          <Route path="invoices" element={<InvoiceList />} />
+          <Route path="invoices/configure" element={<ConfigureInvoice />} />
+          <Route path="invoices/create" element={<CreateInvoice />} />
         </Route>
 
         {/* Fallback for AddProduct standalone if needed or move to admin */}

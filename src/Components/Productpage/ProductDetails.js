@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import API_BASE_URL, { API_ENDPOINTS } from '../../config/api';
 import Swal from 'sweetalert2';
+import ReviewSection from './ReviewSection';
 
 const ProductDetails = () => {
     const { id } = useParams();
@@ -19,19 +20,20 @@ const ProductDetails = () => {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const fetchProduct = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.products.getById(id)}`);
+            setProduct(res.data);
+        } catch (err) {
+            console.error("Fetch product error", err);
+            Swal.fire("Error", "Product not found", "error");
+            navigate('/products');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchProduct = async () => {
-            try {
-                const res = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.products.getById(id)}`);
-                setProduct(res.data);
-            } catch (err) {
-                console.error("Fetch product error", err);
-                Swal.fire("Error", "Product not found", "error");
-                navigate('/products');
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchProduct();
     }, [id, navigate]);
 
@@ -161,6 +163,10 @@ const ProductDetails = () => {
                     </Paper>
                 </Grid>
             </Grid>
+
+            {/* Review Section */}
+            <Divider sx={{ my: 6 }} />
+            <ReviewSection productId={id} onReviewAdded={fetchProduct} />
         </Container>
     );
 };
